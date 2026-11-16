@@ -47,3 +47,5 @@ a.trow:hover{background:rgba(205,238,59,.12)}
 .ordiv{display:flex;align-items:center;gap:12px;color:var(--muted);font-size:13px}
 .ordiv::before,.ordiv::after{content:"";flex:1;height:1px;background:var(--line)}
 img.avatar{object-fit:cover}
+.brand-mark{width:52px;height:52px;object-fit:contain;flex:none}
+.tb-brand img{height:40px;width:auto;display:block}

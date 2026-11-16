@@ -228,7 +228,7 @@ export function TopBar() {
   return (
     <header className="topbar">
       <div className="topbar-in">
-        <a className="tb-brand" href="#/"><span className="brand sm"><Icon name="tile" size={22} /></span><span>Sanaï3i</span></a>
+        <a className="tb-brand" href="#/" aria-label="Brikol"><img src="/app/brand/logo.png" alt="Brikol" /></a>
         <nav className="tb-links">
           {link('#/', t('nav_home'), name === 'home')}
           {link('#/explore', t('nav_explore'), name === 'explore' || name === 'artisan')}
@@ -255,7 +255,7 @@ export function TopBar() {
 export function SiteFooter() {
   return (
     <footer className="site-foot">
-      <span>© Sanaï3i · {t('footerText')}</span>
+      <span>© Brikol · {t('footerText')}</span>
       <a href="/">{t('siteHome')}</a>
     </footer>
   );

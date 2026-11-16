@@ -117,7 +117,7 @@ export default function Login({ route }) {
         <LangButton onClick={() => setLang(lang === 'ar' ? 'fr' : 'ar')} />
       </div>
       <div className="col g8">
-        <div className="brand"><Icon name="tile" size={26} /></div>
+        <img className="brand-mark" src="/app/brand/mark.png" alt="Brikol" />
         <h1 className="h1" style={{ marginTop: 8 }}>{t('hello2')}</h1>
         <span className="muted">{reg ? t('registerSub') : t('loginSub')}</span>
       </div>

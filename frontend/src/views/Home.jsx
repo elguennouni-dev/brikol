@@ -12,7 +12,7 @@ export default function Home() {
     <Screen tab="home">
       <div className="row between g12 m-only">
         <div className="row g10" style={{ minWidth: 0 }}>
-          <div className="brand"><Icon name="tile" size={26} /></div>
+          <img className="brand-mark" src="/app/brand/mark.png" alt="Brikol" />
           <div className="col" style={{ minWidth: 0 }}>
             <span className="muted xs">{user ? t('hello', { name: first }) : t('helloGuest')}</span>
             <span className="row g4" style={{ fontWeight: 800 }}><Icon name="pin" size={15} />{t('city')}</span>

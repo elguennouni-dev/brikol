@@ -1,6 +1,6 @@
 // Minimal service worker: makes the app installable (PWA) and keeps the shell available offline.
 // API calls are never cached. Hashed files in /app/assets/ never change, so they are served cache-first.
-const CACHE = 'sanai3i-shell-v2';
+const CACHE = 'brikol-shell-v3';
 self.addEventListener('install', (e) => { self.skipWaiting(); });
 self.addEventListener('activate', (e) => {
   e.waitUntil(caches.keys().then((ks) => Promise.all(ks.filter((k) => k !== CACHE).map((k) => caches.delete(k)))).then(() => self.clients.claim()));

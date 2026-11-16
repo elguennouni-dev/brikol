@@ -1,4 +1,4 @@
-# Sanaï3i / صنايعي
+# Brikol · بريكول (code name: sanai3i)
 
 Moroccan marketplace connecting clients with artisans (painter, carpenter, mechanic, blacksmith…). Payment is **cash only** — no money flows through the app. UI is bilingual: Darija (RTL) + French.
 
