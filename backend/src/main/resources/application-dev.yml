@@ -1,0 +1,14 @@
+# Run with: mvn spring-boot:run -Dspring-boot.run.profiles=dev
+# In-memory H2 database in MySQL mode: no MySQL installation needed. Data is lost on restart.
+spring:
+  datasource:
+    url: jdbc:h2:mem:sanai3i;MODE=MySQL;DATABASE_TO_LOWER=TRUE;DB_CLOSE_DELAY=-1
+    username: sa
+    password:
+
+app:
+  seed: true
+  admin:
+    phone: "0699000000"
+    password: admin12345
+    name: Admin Demo

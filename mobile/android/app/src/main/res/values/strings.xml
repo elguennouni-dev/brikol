@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Sanaï3i</string>
+    <string name="offline_message">Pas de connexion / ما كاينش الإنترنت</string>
+    <string name="retry">Réessayer / عاود</string>
+</resources>

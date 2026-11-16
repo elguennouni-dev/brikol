@@ -1,0 +1,38 @@
+server:
+  port: ${PORT:8080}
+  forward-headers-strategy: framework
+
+spring:
+  application:
+    name: sanai3i
+  datasource:
+    url: ${DB_URL:jdbc:mysql://localhost:3306/sanai3i?useUnicode=true&characterEncoding=utf8&serverTimezone=UTC&allowPublicKeyRetrieval=true&useSSL=false}
+    username: ${DB_USER:sanai3i}
+    password: ${DB_PASSWORD:sanai3i}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: none          # the schema is owned by Flyway (db/migration)
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+
+app:
+  jwt:
+    # Override with a long random value in production (JWT_SECRET env var, 32+ chars)
+    secret: ${JWT_SECRET:dev-only-secret-change-me-dev-only-secret-change-me}
+    ttl-days: 30
+  # Creates demo artisans, clients and requests when the database is empty
+  seed: ${APP_SEED:false}
+  # Only needed when the web app is served from another origin (not for the WebView apps)
+  cors-origins: ${CORS_ORIGINS:}
+  downloads-dir: ${DOWNLOADS_DIR:./downloads}
+  # The first administrator is created at start-up when both are set (see AdminBootstrap)
+  admin:
+    phone: ${ADMIN_PHONE:}
+    password: ${ADMIN_PASSWORD:}
+    name: ${ADMIN_NAME:Administrateur}

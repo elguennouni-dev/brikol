@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Eight-pointed star (khatem) in lime, centered in the adaptive-icon safe zone -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <group
+        android:pivotX="12"
+        android:pivotY="12"
+        android:scaleX="0.62"
+        android:scaleY="0.62">
+        <path
+            android:fillColor="#00000000"
+            android:pathData="M12 2l2.5 4.1L19 5l-1 4.5L22 12l-4 2.5 1 4.5-4.5-1.1L12 22l-2.5-4.1L5 19l1-4.5L2 12l4-2.5L5 5l4.5 1.1z"
+            android:strokeColor="#CDEE3B"
+            android:strokeLineJoin="round"
+            android:strokeWidth="1.6" />
+    </group>
+</vector>

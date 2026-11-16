@@ -1,0 +1,18 @@
+# secrets and server data
+deploy/.env
+deploy/downloads/
+*.jks
+*.keystore
+# build output (the built web app in backend/src/main/resources/static/app IS committed: the server does not need Node)
+backend/target/
+frontend/node_modules/
+mobile/android/.gradle/
+mobile/android/build/
+mobile/android/app/build/
+mobile/android/local.properties
+mobile/ios/*.xcodeproj/
+mobile/ios/build/
+.idea/
+.vscode/
+*.iml
+.DS_Store

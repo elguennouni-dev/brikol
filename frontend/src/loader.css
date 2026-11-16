@@ -1,0 +1,54 @@
+/* ------------------------------------------------------------------ in-app loader: a khatem that draws itself */
+.loading{padding:56px 0;display:flex;flex-direction:column;align-items:center;gap:14px;color:var(--muted)}
+.khatem{position:relative;display:grid;place-items:center}
+.khatem svg{width:100%;height:100%;overflow:visible;animation:kSpin 7s linear infinite}
+.khatem path,.khatem circle{fill:none;stroke-linejoin:round;stroke-linecap:round;vector-effect:non-scaling-stroke}
+.k-ring{stroke:var(--line);stroke-width:2}
+.k-back{stroke:var(--line);stroke-width:2}
+.k-draw{stroke:var(--ink);stroke-width:2.6;stroke-dasharray:100;stroke-dashoffset:100;animation:kDraw 1.9s cubic-bezier(.6,.05,.3,1) infinite}
+.k-dot{position:absolute;width:22%;height:22%;border-radius:50%;background:var(--lime);box-shadow:0 0 0 0 rgba(205,238,59,.55);animation:kPulse 1.9s ease-out infinite}
+.k-label{font-weight:700;font-size:14px;letter-spacing:.2px}
+.k-label i{font-style:normal;animation:kBlink 1.2s infinite both}
+.k-label i:nth-child(2){animation-delay:.2s}
+.k-label i:nth-child(3){animation-delay:.4s}
+@keyframes kDraw{0%{stroke-dashoffset:100}55%{stroke-dashoffset:0}100%{stroke-dashoffset:-100}}
+@keyframes kSpin{to{transform:rotate(360deg)}}
+@keyframes kPulse{0%{transform:scale(.7);box-shadow:0 0 0 0 rgba(205,238,59,.6)}70%{transform:scale(1);box-shadow:0 0 0 14px rgba(205,238,59,0)}100%{transform:scale(.7);box-shadow:0 0 0 0 rgba(205,238,59,0)}}
+@keyframes kBlink{0%,80%,100%{opacity:.15}40%{opacity:1}}
+
+/* skeleton cards (same silhouette as the artisan/request cards) */
+.skel{height:92px;border-radius:22px;background:linear-gradient(100deg,#E9EDE5 30%,#F6F8F3 50%,#E9EDE5 70%);background-size:220% 100%;animation:skel 1.3s ease-in-out infinite}
+@keyframes skel{from{background-position:120% 0}to{background-position:-120% 0}}
+
+/* entrance animations */
+.view-in{animation:viewIn .32s ease both}
+.stagger{animation:viewIn .4s ease both}
+@keyframes viewIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+
+/* ------------------------------------------------------------------ splash (HTML in index.html, shown before JS runs) */
+#splash{position:fixed;inset:0;z-index:200;background:#0E2B22;display:grid;place-items:center;transition:opacity .5s ease,visibility .5s ease}
+#splash.hide{opacity:0;visibility:hidden}
+#splash .sp{display:flex;flex-direction:column;align-items:center;gap:22px}
+#splash .sp-star{width:104px;height:104px;overflow:visible;animation:kSpin 9s linear infinite}
+#splash .sp-star path,#splash .sp-star circle{fill:none;stroke:#CDEE3B;stroke-linejoin:round;stroke-linecap:round;vector-effect:non-scaling-stroke}
+#splash .sp-ring{stroke-width:1.5;opacity:.25;stroke-dasharray:100;stroke-dashoffset:100;animation:spRing 1.2s .1s ease-out forwards}
+#splash .sp-draw{stroke-width:2.4;stroke-dasharray:100;stroke-dashoffset:100;animation:spDraw 1.4s .15s cubic-bezier(.6,.05,.3,1) forwards}
+#splash .sp-fill{fill:#CDEE3B;stroke:none;opacity:0;animation:spFill .6s 1.1s ease forwards}
+#splash .sp-name{color:#fff;font-family:'Manrope','Tajawal',system-ui,sans-serif;font-weight:800;font-size:30px;letter-spacing:.5px;opacity:0;transform:translateY(8px);animation:spName .6s .7s ease forwards}
+#splash .sp-name b{color:#CDEE3B;font-weight:800}
+#splash .sp-sub{color:#9DB8AB;font-family:'Manrope','Tajawal',system-ui,sans-serif;font-size:14px;margin-top:-12px;opacity:0;animation:spName .6s .95s ease forwards}
+@keyframes spRing{to{stroke-dashoffset:0}}
+@keyframes spDraw{to{stroke-dashoffset:0}}
+@keyframes spFill{to{opacity:.18}}
+@keyframes spName{to{opacity:1;transform:none}}
+
+@media (prefers-reduced-motion:reduce){
+  .khatem svg,#splash .sp-star,.k-dot,.skel{animation:none}
+  .k-draw{animation:none;stroke-dashoffset:0}
+  #splash .sp-ring,#splash .sp-draw{animation:none;stroke-dashoffset:0}
+  #splash .sp-fill,#splash .sp-name,#splash .sp-sub{animation:none;opacity:1;transform:none}
+  .view-in,.stagger{animation:none}
+}
+
+/* children of the scrolling column keep their natural height (never squashed) */
+.scroll>*{flex-shrink:0}

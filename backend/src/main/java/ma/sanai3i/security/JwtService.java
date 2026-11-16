@@ -1,0 +1,49 @@
+package ma.sanai3i.security;
+
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.JwtException;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.security.Keys;
+import ma.sanai3i.domain.Role;
+import ma.sanai3i.domain.User;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Component;
+
+import javax.crypto.SecretKey;
+import java.nio.charset.StandardCharsets;
+import java.util.Date;
+import java.util.Optional;
+
+@Component
+public class JwtService {
+    private final SecretKey key;
+    private final long ttlMillis;
+
+    public JwtService(@Value("${app.jwt.secret}") String secret,
+                      @Value("${app.jwt.ttl-days}") long ttlDays) {
+        this.key = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
+        this.ttlMillis = ttlDays * 24L * 60L * 60L * 1000L;
+    }
+
+    public String issue(User user) {
+        Date now = new Date();
+        return Jwts.builder()
+                .subject(String.valueOf(user.id))
+                .claim("role", user.role.name())
+                .issuedAt(now)
+                .expiration(new Date(now.getTime() + ttlMillis))
+                .signWith(key)
+                .compact();
+    }
+
+    public Optional<AuthUser> parse(String token) {
+        try {
+            Claims claims = Jwts.parser().verifyWith(key).build().parseSignedClaims(token).getPayload();
+            Long id = Long.valueOf(claims.getSubject());
+            Role role = Role.valueOf(claims.get("role", String.class));
+            return Optional.of(new AuthUser(id, role));
+        } catch (JwtException | IllegalArgumentException e) {
+            return Optional.empty();
+        }
+    }
+}

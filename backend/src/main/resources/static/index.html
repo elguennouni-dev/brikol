@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0E2B22">
+<title>Sanaï3i · صنايعي</title>
+<meta name="description" content="لقا الصنايعي ديالك: صباغ، نجار، ميكانيسيان، حداد... الخلاص كاش. Trouvez un artisan de confiance, paiement en espèces.">
+<link rel="icon" type="image/png" href="/app/icons/icon-192.png">
+<link rel="apple-touch-icon" href="/app/icons/icon-180.png">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;700;800&family=Tajawal:wght@400;500;700;800&display=swap">
+<style>
+:root{--ink:#0E2B22;--lime:#CDEE3B;--bg:#F4F6F2;--card:#fff;--mut:#5B6B62;--line:#DDE3DA;--r:20px}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:'Tajawal','Manrope',system-ui,sans-serif;line-height:1.6;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+html[lang=fr] body{font-family:'Manrope','Tajawal',system-ui,sans-serif}
+.wrap{max-width:1040px;margin:0 auto}
+header{display:flex;align-items:center;justify-content:space-between;padding:18px 0}
+.logo{display:flex;align-items:center;gap:10px;font-weight:800;font-size:20px;text-decoration:none;color:var(--ink)}
+.logo img{width:36px;height:36px;border-radius:10px}
+.lang{border:1.5px solid var(--ink);background:transparent;color:var(--ink);border-radius:999px;padding:6px 16px;font:inherit;font-weight:700;cursor:pointer}
+.hero{background:var(--ink);color:#fff;border-radius:28px;padding:44px 28px;display:grid;gap:28px;grid-template-columns:1.2fr .8fr;align-items:center;overflow:hidden}
+.hero h1{font-size:clamp(30px,5vw,50px);line-height:1.15;margin:0 0 14px;font-weight:800;text-wrap:balance}
+.hero h1 em{font-style:normal;color:var(--lime)}
+.hero p{margin:0 0 24px;color:#C9D8CF;font-size:18px;max-width:46ch}
+.btns{display:flex;flex-wrap:wrap;gap:12px}
+.btn{display:inline-flex;align-items:center;gap:8px;min-height:50px;padding:0 24px;border-radius:999px;font:inherit;font-weight:800;font-size:16px;text-decoration:none;border:0;cursor:pointer}
+.btn.lime{background:var(--lime);color:var(--ink)}
+.btn.ghost{background:transparent;color:#fff;border:1.5px solid #ffffff55}
+.phone{justify-self:center;width:min(250px,100%);aspect-ratio:9/18;background:#fff;border-radius:34px;border:8px solid #1c3d33;padding:16px;color:var(--ink);display:flex;flex-direction:column;gap:10px}
+.phone .bar{height:34px;border-radius:12px;background:var(--bg)}
+.phone .row{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.phone .row i{aspect-ratio:1;border-radius:14px;background:var(--bg);display:block}
+.phone .row i:nth-child(odd){background:var(--lime)}
+.phone .card{border-radius:14px;background:var(--bg);height:54px}
+.phone .big{flex:1;border-radius:16px;background:var(--ink)}
+section{padding:56px 0 0}
+h2{font-size:clamp(24px,3.4vw,34px);margin:0 0 20px;font-weight:800}
+.steps{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));counter-reset:s}
+.step{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:22px;counter-increment:s}
+.step::before{content:counter(s);display:grid;place-items:center;width:38px;height:38px;border-radius:12px;background:var(--lime);font-weight:800;margin-bottom:12px}
+.step h3{margin:0 0 6px;font-size:18px}.step p{margin:0;color:var(--mut)}
+.cats{display:flex;flex-wrap:wrap;gap:10px}
+.cats>span{background:var(--card);border:1px solid var(--line);border-radius:999px;padding:8px 18px;font-weight:700}
+.dl{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(260px,1fr))}
+.box{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:24px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.box h3{margin:0;font-size:20px}.box p{margin:0;color:var(--mut)}
+.box .btn{align-self:flex-start;margin-top:auto}
+.box .btn.dark{background:var(--ink);color:#fff}
+.box .btn.off{background:var(--line);color:var(--mut);cursor:default;pointer-events:none}
+.box ol{margin:0;padding-inline-start:20px;color:var(--mut)}
+.tag{font-size:13px;font-weight:700;background:var(--bg);border-radius:999px;padding:2px 12px;align-self:flex-start}
+footer{padding:48px 0 calc(32px + env(safe-area-inset-bottom,0px));color:var(--mut);font-size:14px;text-align:center}
+[data-l]{display:none}
+html[lang=ar] [data-l=ar],html[lang=fr] [data-l=fr]{display:revert}
+html[lang=ar] span[data-l=ar],html[lang=fr] span[data-l=fr]{display:inline}
+@media(max-width:760px){.hero{grid-template-columns:1fr;padding:32px 20px}.phone{display:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <a class="logo" href="/"><img src="/app/icons/icon-192.png" alt=""><span>Sanaï3i · صنايعي</span></a>
+    <button class="lang" id="lang" type="button">FR</button>
+  </header>
+
+  <div class="hero">
+    <div>
+      <h1><span data-l="ar">لقا <em>الصنايعي</em> ديالك<br>فبلاصة وحدة</span><span data-l="fr">Trouvez <em>l'artisan</em> qu'il vous faut,<br>près de chez vous</span></h1>
+      <p><span data-l="ar">صباغ، نجار، ميكانيسيان، حداد، كهربائي، سباك... دير الطلب ديالك، تجيك العروض، وتختار. الخلاص كاش للصنايعي، بلا وسيط.</span><span data-l="fr">Peintre, menuisier, mécanicien, forgeron, électricien, plombier… Publiez votre demande, recevez des offres, choisissez. Paiement en espèces, sans intermédiaire.</span></p>
+      <div class="btns">
+        <a class="btn lime" href="/app/"><span data-l="ar">استعمل التطبيق دابا</span><span data-l="fr">Ouvrir l'application</span></a>
+        <a class="btn ghost" href="#download"><span data-l="ar">تحميل الأبس</span><span data-l="fr">Télécharger</span></a>
+      </div>
+    </div>
+    <div class="phone" aria-hidden="true"><div class="bar"></div><div class="row"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div><div class="card"></div><div class="card"></div><div class="big"></div></div>
+  </div>
+
+  <section>
+    <h2><span data-l="ar">كيفاش كيخدم؟</span><span data-l="fr">Comment ça marche ?</span></h2>
+    <div class="steps">
+      <div class="step"><h3><span data-l="ar">دير طلب</span><span data-l="fr">Publiez</span></h3><p><span data-l="ar">وصف الخدمة، المدينة والوقت اللي بغيتي.</span><span data-l="fr">Décrivez le travail, la ville et le délai souhaité.</span></p></div>
+      <div class="step"><h3><span data-l="ar">قارن العروض</span><span data-l="fr">Comparez</span></h3><p><span data-l="ar">الصنايعية كيبعثو ليك الثمن والوقت، وتشوف التقييمات.</span><span data-l="fr">Les artisans envoient prix et délai, vous voyez les avis.</span></p></div>
+      <div class="step"><h3><span data-l="ar">اختار وتواصل</span><span data-l="fr">Choisissez</span></h3><p><span data-l="ar">تقبل عرض، كيبان ليك رقم الصنايعي وتتصل بيه ولا واتساب.</span><span data-l="fr">Acceptez une offre, appelez ou écrivez sur WhatsApp.</span></p></div>
+      <div class="step"><h3><span data-l="ar">خلص كاش</span><span data-l="fr">Payez en espèces</span></h3><p><span data-l="ar">الخدمة تكمل، تخلص مباشرة وتعطي تقييمك.</span><span data-l="fr">Une fois le travail fini, vous payez en main propre et notez.</span></p></div>
+    </div>
+  </section>
+
+  <section>
+    <h2><span data-l="ar">الخدمات</span><span data-l="fr">Services</span></h2>
+    <div class="cats">
+      <span><span data-l="ar">صباغ</span><span data-l="fr">Peinture</span></span>
+      <span><span data-l="ar">نجار</span><span data-l="fr">Menuiserie</span></span>
+      <span><span data-l="ar">ميكانيك</span><span data-l="fr">Mécanique</span></span>
+      <span><span data-l="ar">حداد</span><span data-l="fr">Ferronnerie</span></span>
+      <span><span data-l="ar">كهربائي</span><span data-l="fr">Électricité</span></span>
+      <span><span data-l="ar">سباك</span><span data-l="fr">Plomberie</span></span>
+      <span><span data-l="ar">زليج</span><span data-l="fr">Carrelage</span></span>
+    </div>
+  </section>
+
+  <section id="download">
+    <h2><span data-l="ar">تحميل التطبيق</span><span data-l="fr">Télécharger l'application</span></h2>
+    <div class="dl">
+      <div class="box">
+        <span class="tag">Android</span>
+        <h3><span data-l="ar">تطبيق أندرويد (APK)</span><span data-l="fr">Application Android (APK)</span></h3>
+        <p><span data-l="ar">حمل الملف وفتحو. إلى سولك الهاتف، سمح بالتثبيت من هاد المصدر.</span><span data-l="fr">Téléchargez puis ouvrez le fichier. Autorisez l'installation depuis cette source si demandé.</span></p>
+        <a class="btn dark off" id="apk" href="/downloads/sanai3i.apk" download><span data-l="ar">قريبا</span><span data-l="fr">Bientôt disponible</span></a>
+      </div>
+      <div class="box">
+        <span class="tag">iPhone / iPad</span>
+        <h3><span data-l="ar">تثبيت على آيفون</span><span data-l="fr">Installer sur iPhone</span></h3>
+        <ol>
+          <li><span data-l="ar">فتح هاد الصفحة فـ Safari</span><span data-l="fr">Ouvrez cette page dans Safari</span></li>
+          <li><span data-l="ar">ضغط على زر المشاركة (المربع والسهم)</span><span data-l="fr">Touchez le bouton Partager</span></li>
+          <li><span data-l="ar">اختار «إضافة إلى الشاشة الرئيسية»</span><span data-l="fr">Choisissez « Sur l'écran d'accueil »</span></li>
+        </ol>
+        <a class="btn dark" href="/app/"><span data-l="ar">فتح التطبيق</span><span data-l="fr">Ouvrir l'application</span></a>
+      </div>
+      <div class="box">
+        <span class="tag">Web</span>
+        <h3><span data-l="ar">بلا تحميل</span><span data-l="fr">Sans installation</span></h3>
+        <p><span data-l="ar">التطبيق كيخدم مباشرة فالمتصفح، فكل هاتف وكمبيوتر.</span><span data-l="fr">L'application fonctionne directement dans le navigateur, sur mobile comme sur ordinateur.</span></p>
+        <a class="btn dark" href="/app/"><span data-l="ar">فتح فالمتصفح</span><span data-l="fr">Ouvrir dans le navigateur</span></a>
+      </div>
+    </div>
+  </section>
+
+  <footer>© Sanaï3i · <span data-l="ar">الخلاص كاش، ما كاينش دفع داخل التطبيق</span><span data-l="fr">Paiement en espèces, aucun paiement dans l'application</span></footer>
+</div>
+<script>
+(function () {
+  var html = document.documentElement, btn = document.getElementById('lang');
+  function set(l) {
+    html.lang = l; html.dir = l === 'ar' ? 'rtl' : 'ltr'; btn.textContent = l === 'ar' ? 'FR' : 'عربية';
+    try { localStorage.setItem('landing-lang', l); } catch (e) {}
+  }
+  var saved = null; try { saved = localStorage.getItem('landing-lang'); } catch (e) {}
+  set(saved || ((navigator.language || '').indexOf('fr') === 0 ? 'fr' : 'ar'));
+  btn.addEventListener('click', function () { set(html.lang === 'ar' ? 'fr' : 'ar'); });
+  // Enable the Android button only if the APK has been uploaded to the server.
+  var apk = document.getElementById('apk');
+  fetch('/downloads/sanai3i.apk', { method: 'HEAD' }).then(function (r) {
+    if (r.ok) {
+      apk.classList.remove('off');
+      apk.querySelector('[data-l=ar]').textContent = 'تحميل APK';
+      apk.querySelector('[data-l=fr]').textContent = 'Télécharger l’APK';
+    }
+  }).catch(function () {});
+})();
+</script>
+</body>
+</html>

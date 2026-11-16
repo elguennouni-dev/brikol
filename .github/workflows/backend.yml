@@ -1,0 +1,22 @@
+# Compiles the backend and runs every test on each push (H2 database, no MySQL needed).
+name: Backend tests
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: 17, cache: maven }
+      - name: mvn test
+        working-directory: backend
+        run: mvn -B -ntp test
+      - name: Test reports
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: surefire-reports
+          path: backend/target/surefire-reports

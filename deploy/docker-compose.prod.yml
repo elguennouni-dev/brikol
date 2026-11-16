@@ -1,0 +1,44 @@
+# Production stack for a server that already runs Nginx (aaPanel): the app listens only on 127.0.0.1:8080,
+# and the aaPanel site "snai3i.elguennouni.site" proxies to it (HTTPS is handled by aaPanel).
+services:
+  db:
+    image: mysql:8.0
+    restart: unless-stopped
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci --innodb-buffer-pool-size=256M
+    environment:
+      MYSQL_DATABASE: sanai3i
+      MYSQL_USER: sanai3i
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+    volumes:
+      - dbdata:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -uroot -p$$MYSQL_ROOT_PASSWORD"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+
+  app:
+    build: ../backend
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:8080:8080"
+    environment:
+      DB_URL: jdbc:mysql://db:3306/sanai3i?useUnicode=true&characterEncoding=utf8&serverTimezone=UTC
+      DB_USER: sanai3i
+      DB_PASSWORD: ${DB_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET}
+      CORS_ORIGINS: ${CORS_ORIGINS:-https://snai3i.elguennouni.site}
+      APP_SEED: ${APP_SEED:-false}
+      ADMIN_PHONE: ${ADMIN_PHONE:-}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
+      ADMIN_NAME: ${ADMIN_NAME:-Administrateur}
+      DOWNLOADS_DIR: /data/downloads
+    volumes:
+      - ./downloads:/data/downloads:ro
+
+volumes:
+  dbdata:

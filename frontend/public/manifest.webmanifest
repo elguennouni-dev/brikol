@@ -1,0 +1,17 @@
+{
+  "name": "Sanaï3i · صنايعي",
+  "short_name": "Sanaï3i",
+  "description": "Trouvez un artisan de confiance · لقا الصنايعي ديالك",
+  "start_url": "/app/",
+  "scope": "/app/",
+  "display": "standalone",
+  "background_color": "#F4F6F2",
+  "theme_color": "#0E2B22",
+  "lang": "ar",
+  "dir": "rtl",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
