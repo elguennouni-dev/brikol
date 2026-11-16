@@ -1,188 +1,168 @@
-# Brikol · بريكول (code name: sanai3i)
+<p align="center">
+  <img src="docs/screenshots/logo.png" alt="Brikol" width="220">
+</p>
 
-Moroccan marketplace connecting clients with artisans (painter, carpenter, mechanic, blacksmith…). Payment is **cash only** — no money flows through the app. UI is bilingual: Darija (RTL) + French.
+<p align="center">
+  A marketplace for home repairs in Morocco. Clients post a problem, nearby artisans send prices.
+  <br>
+  <a href="https://snai3i.elguennouni.site">Live site</a> ·
+  <a href="docs/SETUP.md">Setup & reference</a> ·
+  <a href="deploy/README-DEPLOY.md">Deployment</a>
+</p>
 
+<p align="center">
+  <a href="https://github.com/elguennouni-dev/brikol/actions/workflows/backend.yml"><img src="https://github.com/elguennouni-dev/brikol/actions/workflows/backend.yml/badge.svg" alt="Backend tests"></a>
+  <a href="https://github.com/elguennouni-dev/brikol/actions/workflows/android-check.yml"><img src="https://github.com/elguennouni-dev/brikol/actions/workflows/android-check.yml/badge.svg" alt="Android build"></a>
+</p>
+
+![Client flow: home, new request, offers, chat](docs/screenshots/client-flow.jpg)
+
+## Why I built this
+
+In Morocco, finding a plumber or a painter usually means asking a neighbour, calling a number written on a wall, or waiting at the *mo9ef* (the corner where day workers gather). You don't know the price until the person is already in your house, and the artisan doesn't know what the job is until he gets there.
+
+Brikol (from *bricoler*, the word everybody uses for small repair jobs) tries to fix that with a simple flow:
+
+1. You take a photo or record a voice note of the problem and say roughly where you are.
+2. Artisans of that trade who work in your area see it and send a price.
+3. You compare, negotiate if you want, accept one, and chat to set a time.
+4. He comes, you pay him in cash, you both leave a review.
+
+The app doesn't touch the payment. Most people here pay cash and that's not going to change because of an app, so I didn't fight it.
+
+The whole UI is in Darija (Arabic script, right-to-left) and French, and you can switch at any moment.
+
+## What it does
+
+**For clients**
+- Post a request with photos, a short video or a voice note (a lot of people prefer talking to typing)
+- Pick the location on a map, or use the current position
+- Get offers live, without refreshing, and counter-offer on the price
+- Chat with the artisan once an offer is accepted, and agree on an appointment (with a reminder the day before)
+- Rate the artisan, report abuse
+
+**For artisans**
+- See only requests for their own trade, inside the radius they chose (5 to 50 km)
+- Send a price, negotiate (up to 6 rounds), see how far the job is and how the client was rated by other artisans
+- Before getting any work, fill an activation file (CIN front/back, photo, past work, zone) that a person from the team checks
+
+**For the team**
+- Dashboard with the numbers that matter (requests per day, signups, per-trade breakdown, live connections)
+- Review artisan files, approve or reject with a reason
+- Handle reports, block users, edit trades and their price bounds, send broadcasts
+- An owner account and staff accounts with only the permissions they need (files, reports, billing…). You can't turn a normal user into an admin; staff are created from the Team tab.
+- Every sensitive action is written to an audit log
+
+<table>
+  <tr>
+    <td><img src="docs/screenshots/admin-dashboard.jpg" alt="Admin dashboard"></td>
+    <td><img src="docs/screenshots/admin-file.jpg" alt="Reviewing an artisan file"></td>
+  </tr>
+  <tr>
+    <td align="center"><sub>Admin dashboard</sub></td>
+    <td align="center"><sub>Reviewing an artisan's activation file</sub></td>
+  </tr>
+</table>
+
+![Artisan side and the Darija (RTL) version](docs/screenshots/artisan-flow.jpg)
+<p align="center"><sub>Artisan side: matching requests with distance and client rating, the activation file, and the home screen in Darija</sub></p>
+
+## Stack
+
+| | |
+|---|---|
+| Backend | Java 17, Spring Boot 3, Spring Security (JWT), JPA/Hibernate, Flyway, MySQL 8 (H2 for dev and tests) |
+| Web app | React 18 + Vite, no UI kit, hand-written CSS. Leaflet + OpenStreetMap for maps, Photon for address search |
+| Mobile | Android (Kotlin) and iOS (SwiftUI) shells around the web app, with native camera, mic, location and push |
+| Realtime | Server-Sent Events |
+| Notifications | Firebase Cloud Messaging, Twilio for SMS codes |
+| Infra | Docker Compose on a VPS behind Nginx, GitHub Actions for tests and the Android build |
+
+```mermaid
+flowchart LR
+  A[Android app] --> W
+  I[iOS app] --> W
+  B[Browser] --> W
+  W[React web app] -- REST + SSE --> S[Spring Boot API]
+  G[Google] -- crawls --> P[Server-rendered pages] --> S
+  S --> DB[(MySQL)]
+  S --> U[(Uploads volume)]
+  S --> F[Firebase push]
+  S --> T[Twilio SMS]
 ```
-backend/         Spring Boot 3 + MySQL (REST API + serves the built web app and the landing page)
-frontend/        React (Vite) source of the web app; `npm run build` writes into backend/.../static/app
-mobile/android/  Kotlin WebView shell
-mobile/ios/      SwiftUI + WKWebView shell (XcodeGen)
-docker-compose.yml
-```
 
-## Run the backend
+The Spring Boot app serves everything: the API, the built React app under `/app/`, and a landing page plus SEO pages at the root. One container, one port, which keeps deployment boring.
 
-**Quick, no MySQL (H2 in memory, demo data):**
-```
+## A few things I found interesting to build
+
+**Price range per trade.** When a client types a budget, or an artisan types a price, it has to be inside a range, otherwise you get 5 DH jokes or 500 000 DH typos. Each trade starts with bounds set by the admin. Once there are enough accepted offers for that trade, the range tightens around real prices (from 60% of the 10th percentile to 160% of the 90th). The range is frozen on the request when it's created, so it doesn't move under people mid-negotiation. See `PricingService`.
+
+**Negotiation.** An offer remembers who spoke last, how many rounds happened and the first price. You can only answer when it's your turn, and after 6 rounds it's take it or leave it. Small state machine, but it removed a lot of back and forth in chat.
+
+**Matching and location privacy.** Requests are matched by trade and by haversine distance between the client's pin and the artisan's base, within the artisan's radius (falls back to same city when there are no coordinates). Before an offer is accepted, the artisan only sees the position rounded to about 1 km and no address. The exact place and phone number are revealed only after acceptance.
+
+**Live updates without WebSockets.** New offers, messages and status changes go through one SSE stream per user. Browsers' `EventSource` can't send an `Authorization` header, so the client reads the stream with `fetch` and parses it by hand, and reconnects with backoff. Events are only published after the database transaction commits, so the client never fetches something that isn't there yet.
+
+**Artisan activation.** Artisans have a status (draft, pending, approved, rejected). Until they're approved they can't see any request. ID photos are stored privately and only served to staff who have the FILES permission. Uploaded files are checked by their actual bytes, not by the extension.
+
+**Pages for Google.** A React app is mostly invisible to search engines, so the server also renders plain HTML pages like `/artisans/plomberie/casablanca` and one page per approved artisan, with JSON-LD, a sitemap, and `noindex` on empty pages so we don't publish thin content.
+
+**One frontend, three apps.** The same React bundle runs on the web and inside the Android and iOS shells. The shells add what a WebView can't do well on its own (file pickers with the camera, microphone, push tokens) and pass it to the page through a small JS bridge.
+
+**Rate limiting and abuse.** Login lockout after repeated failures, limits on SMS codes (cooldown and hourly cap), on uploads, chat messages and reports, plus a simple report system that lands in the admin panel.
+
+## Running it locally
+
+You need Java 17, Maven and Node 18+.
+
+```bash
+# backend with an in-memory database and demo data
 cd backend
 mvn spring-boot:run -Dspring-boot.run.profiles=dev
+# → http://localhost:8080 (landing) and http://localhost:8080/app/
 ```
-Open http://localhost:8080
 
-**With MySQL via Docker:**
+```bash
+# web app with hot reload (proxies /api to :8080)
+cd frontend
+npm install
+npm run dev
 ```
-docker compose up --build
+
+Demo accounts (dev profile only), password `demo1234`:
+- client: `0600000001`
+- artisan (painter): `0611000001`
+
+SMS, push and Google sign-in are off until you give them credentials. The app works without them (phone + password sign-up). Set `SMS_PROVIDER=log` if you want to try the SMS code flow locally; codes are then printed in the logs.
+
+To run with MySQL instead: `docker compose up --build`. Production deployment (Docker on a VPS, env file, update script) is described in [deploy/README-DEPLOY.md](deploy/README-DEPLOY.md), and every setting is listed in [docs/SETUP.md](docs/SETUP.md).
+
+## Tests
+
+```bash
+cd backend && mvn test
 ```
-Env vars: `DB_URL`, `DB_USER`, `DB_PASSWORD`, `JWT_SECRET` (long random string!), `APP_SEED` (demo data, `false` in production), `CORS_ORIGINS`, `PORT`.
 
-**Tests:** `cd backend && mvn test` (full flow: request → offers → accept → complete → review).
+The tests are mostly end-to-end through the HTTP layer with MockMvc on H2: a full job from request to review, negotiation rules, matching by trade and distance, artisan activation, staff permissions, OTP limits, chat and appointments. They run on every push with GitHub Actions, along with a debug build of the Android app.
 
-## Demo accounts (when APP_SEED=true / dev profile)
-Password `demo1234`
-- Client: `0600000001` (Amine), `0600000002`, `0600000003`
-- Artisans: `0611000001` Hassan (painter), `0611000002` Omar, `0611000003` Anas, `0611000004` Karim (carpenter), `0611000005` Youssef (mechanic), `0611000006` Rachid (blacksmith), `0611000007` Said (electrician), `0611000008` Mohamed (plumber), `0611000009` Brahim (tiler)
+## Project layout
 
-## API (JSON, `Authorization: Bearer <jwt>`)
-| Method | Path | Notes |
-|---|---|---|
-| POST | /api/auth/register, /api/auth/login | phone + password; role CLIENT or ARTISAN |
-| POST | /api/auth/google | Google ID token (+ phone, role, trade the first time) |
-| GET | /api/me | |
-| GET | /api/categories | public |
-| GET | /api/artisans?category&q&city&availableToday | public |
-| GET | /api/artisans/{id} | public |
-| POST | /api/requests | client creates a job request (`lat`, `lng`, `address`, `city` from the map) |
-| GET | /api/requests/mine?tab=active\|done | client |
-| GET | /api/requests/{id} | owner only |
-| POST | /api/requests/{id}/offers/{offerId}/accept | reveals artisan phone to client |
-| POST | /api/requests/{id}/complete, /cancel, /review | |
-| GET | /api/artisan/requests, /api/artisan/jobs | artisan: open requests / own jobs |
-| POST | /api/requests/{id}/offers | artisan sends an offer |
-| GET, PATCH | /api/artisan/me | profile |
-| POST, DELETE | /api/artisan/services[/{id}] | price list |
-| GET | /api/notifications | latest 50 + unread count |
-| POST | /api/notifications/read-all, /api/notifications/{id}/read | |
-| GET | /api/notifications/stream | live channel (Server-Sent Events, `Authorization: Bearer`) |
+```
+backend/        Spring Boot API, Flyway migrations, landing page and SEO pages
+frontend/       React app (built into backend/src/main/resources/static/app)
+mobile/android  Kotlin WebView shell
+mobile/ios      SwiftUI WKWebView shell (XcodeGen)
+deploy/         production compose file and deploy/update scripts
+docs/           setup reference and screenshots
+```
 
-Errors are codes (e.g. `PHONE_TAKEN`) translated by the web app.
+## What's next
 
-## SMS codes and forgotten password (Twilio)
-Off until configured: sign-up then works without code and "forgot password" says it is unavailable.
-To turn on, in `deploy/.env`: `SMS_PROVIDER=twilio`, `TWILIO_ACCOUNT_SID=AC...`, `TWILIO_AUTH_TOKEN=...`,
-`TWILIO_FROM=+1...` (a Twilio number) or `MG...` (Messaging Service), then `bash deploy/update.sh`.
-Codes: 6 digits, 10 minutes, 5 tries, 1 per minute and 5 per hour per number. New accounts (password or Google) need the code;
-`POST /api/auth/otp {phone, purpose: REGISTER|RESET}`, `POST /api/auth/reset {phone, otp, password}`.
+- Publish the Android app on the Play Store
+- Let artisans set availability per day instead of a single "available today" switch
+- Better search ranking (distance, rating and response time together)
+- Online payment as an option for artisans who want it, never mandatory
 
-## Rate limits
-Per IP: login 20 / 10 min, sign-up 15 / h, SMS 6 / h, reset 10 / h, uploads 60 / 10 min, reports 15 / h, chat 40 / min (`429 RATE_LIMITED`).
-Per number: 8 wrong passwords in 15 min lock the login (`TOO_MANY_ATTEMPTS`). Off in the `dev` profile (`RATE_LIMIT=false`).
+## Author
 
-## Push notifications (Firebase)
-Every notification is also sent as a push (Android app, browsers, iPhone PWA 16.4+) when Firebase is configured:
-1. console.firebase.google.com: create a project. Project settings > Service accounts > Generate new private key: save it on
-   the server as `deploy/secrets/fcm.json` (deploy.sh adds `FCM_CREDENTIALS`).
-2. Project settings > General > Add app > Web: copy `apiKey`, `appId`, `projectId`, `messagingSenderId` into `deploy/.env` as
-   `FIREBASE_API_KEY`, `FIREBASE_APP_ID`, `FIREBASE_PROJECT_ID`, `FIREBASE_SENDER_ID`. Cloud Messaging > Web Push certificates >
-   Generate key pair: `FIREBASE_VAPID_KEY`.
-3. Add app > Android, package `ma.sanai3i.app`: download `google-services.json` into `mobile/android/app/` (or the GitHub secret
-   `GOOGLE_SERVICES_JSON`, base64) and rebuild the APK. Without it the app works, push is just off.
-Users enable it on the web from Account > "Activer les notifications"; the Android app asks at start.
-
-## Chat, appointment, reviews both ways, reports
-After acceptance: chat (`/app/#/chat/{id}`, live over SSE, push when away), appointment proposed by one side and confirmed by
-the other, reminder one hour before. After the job the artisan rates the client; artisans see the client's rating on new requests.
-"Signaler" on artisans, offers, requests and chat messages; Admin > Signalements to resolve or dismiss.
-
-## Subscription (revenue)
-Off by default. Admin > Outils > Revenus: turn on, monthly price, free days, "featured" price, how to pay (CashPlus, RIB...).
-Artisans pay outside the app; the admin records the payment on the user page, which extends the subscription (or featured).
-Without an active subscription an artisan can see requests but not send offers. Featured artisans are listed first.
-
-## Pages for Google
-`/artisans` (index), `/artisans/{trade}/{city}` (e.g. `/artisans/paint/casablanca`), `/pro/{id}/{slug}` (artisan profile with
-schema.org data), `/sitemap.xml`, `/robots.txt`. Submit the sitemap in Google Search Console.
-
-## Requests: photos, video, voice notes
-`POST /api/uploads` (multipart: `file`, `purpose`). Clients attach up to 6 files to a request (`mediaIds`): photos (resized to
-1600 px in the browser, JPEG/PNG/WebP, 10 MB), video (MP4/MOV/WebM/3GP, 60 MB), voice notes recorded in the app (WebM/MP4 audio, 15 MB).
-Files live in `UPLOADS_DIR` (production: `deploy/uploads`, a Docker volume, not in Git) and are served at `/media/{uuid}`.
-Artisan ID-card images (`ID_FRONT`, `ID_BACK`) are private: `/api/media/{id}` for the owner and admins only.
-Behind Nginx raise the upload limit (aaPanel: site > Config, `client_max_body_size 100m;`).
-
-## Prices and negotiation
-Each trade has hard bounds (`categories.min_price/max_price`, editable by the admin). `PricingService` narrows them from real
-accepted prices of the last 12 months when there are 5+ (60 % of the 10th percentile to 160 % of the 90th). The range is frozen
-on the request (`price_min/price_max`) and every budget, offer and counter-offer must be inside it (`PRICE_OUT_OF_RANGE`).
-Prices are typed by hand. Negotiation on an offer: the client counters (`POST /api/requests/{id}/offers/{offerId}/counter`), the
-artisan counters back (`POST /api/artisan/offers/{offerId}/counter`) or agrees (`.../agree`, the deal is closed like an acceptance).
-6 counter-offers max per offer. The client can accept only the artisan's latest price.
-
-## Artisan activation
-New artisans are `DRAFT`. They fill a file (`/app/#/onboarding`, `GET/PUT /api/artisan/me/onboarding`): full name, CIN + photos
-(front/back), photo, years, description, trade, workshop location on the map and travel radius, 2+ portfolio photos, then send it
-(`POST .../submit`, status `PENDING`, admins notified). Admin > Artisan files: approve (`APPROVED`, verified badge) or reject with a
-reason (`REJECTED`, the artisan fixes and resends). Until approved an artisan is not listed and cannot see requests or send offers.
-Approved artisans only see requests of their trade within their radius (same city when a position is missing), nearest first,
-with the distance; the exact address appears once their offer is accepted.
-
-## Sign in with Google
-Web and iPhone (PWA in Safari): button "Continuer avec Google" on the login page (Google Identity Services).
-The browser gets an ID token, `POST /api/auth/google {credential}` verifies it on the server (Google's public keys, issuer,
-audience = `GOOGLE_CLIENT_ID`, expiry). Known account (same Google id, or same verified e-mail): signed in. New account:
-the server answers `428 GOOGLE_SIGNUP_NEEDED`, the app asks once for the phone number and the role (and trade for artisans),
-then calls again with them. Client ID: `app.google.client-id` / env `GOOGLE_CLIENT_ID`; in Google Cloud add the site to
-"Authorized JavaScript origins". Inside the Android/iOS app WebViews Google forbids this page, so the button is hidden there
-(the apps add `Sanai3iApp/...` to the user agent); native Google sign-in in the apps is a next step.
-
-## Location on a live map
-When a client posts a request he picks the place on a map (Leaflet + OpenStreetMap tiles, no API key):
-search as you type (Photon geocoder, limited to Morocco), "my location" (GPS), or move the map under the pin.
-The request stores `lat`, `lng`, `address`, and the city found on the map (used to notify the artisans of that city;
-city names are compared without accents: Fès = Fes). Artisans only see an approximate area (about 1 km, no street) until
-their offer is accepted; then they get the exact address and an "Itinéraire" link (Google Maps). The Android app asks for
-the location permission; iOS shows the message from `NSLocationWhenInUseUsageDescription`.
-Public servers used: `tile.openstreetmap.org` and `photon.komoot.io` (fair use, fine for a small app; for heavy traffic run your own or use a paid tile provider).
-
-## Git workflow
-- Every push runs `mvn test` on GitHub (Actions > Backend tests).
-- Server update: `bash deploy/update.sh` (git pull + rebuild + restart). `deploy/.env` and `deploy/downloads/` are not in Git.
-- The built web app (`backend/src/main/resources/static/app`) is committed, so the server does not need Node. After changing `frontend/`, run `npm run build` before committing.
-
-## Administration
-**Team**: the account in `ADMIN_PHONE` is the owner (super admin, every right, cannot be changed by anyone). Only the owner
-manages the team (Admin > Équipe, `/api/admin/staff`): creates staff accounts (name, phone, password) with permissions
-`FILES, USERS, REQUESTS, REPORTS, CATEGORIES, BILLING, BROADCAST, SETTINGS, AUDIT`, edits them, suspends, resets the password,
-takes an account out of the team (back to a client account) or deletes it. Nobody can promote an existing user to admin.
-Permissions are checked on every administration call; staff only see the tabs they may use.
-
-Roles: `CLIENT`, `ARTISAN`, `ADMIN`. The admin can never be created from the public sign-up form.
-The first admin is created at start-up from `ADMIN_PHONE` / `ADMIN_PASSWORD` / `ADMIN_NAME` (dev profile: `0699000000` / `admin12345`;
-on the server `deploy.sh` generates them in `deploy/.env` and prints them). Panel: `/app/#/admin`.
-
-- **Dashboard**: users by role, blocked, new this week, requests by status, offers, average rating, people online, 14-day charts, per-trade counts.
-- **Users**: search/filter, detail, block / unblock (reason; the session is cut at once, login refused), temporary password reset, promote/demote admin, verify artisans.
-- **Requests / reviews**: search, detail with offers, cancel a request (client and artisans are notified), delete an abusive review.
-- **Trades**: add / rename / delete (refused while in use).
-- **Audit log**: every login (also failed or blocked), sign-up, request, offer, acceptance, review and every admin action, with actor, detail and IP. Filter by action or text.
-- **Tools**: announcement to all / clients / artisans (live notification), site settings (close registrations, banner message), system info, CSV export of users and requests.
-
-| Method | Path |
-|---|---|
-| GET | /api/public/config (banner, registrations open) |
-| GET | /api/admin/stats, /system, /users, /users/{id}, /requests, /requests/{id}, /reviews, /categories, /audit, /settings |
-| POST | /api/admin/users/{id}/block, /unblock, /reset-password, /role; /artisans/{id}/verified; /requests/{id}/cancel; /broadcast; /categories |
-| PUT, DELETE | /api/admin/categories/{id}, /settings, /reviews/{id} |
-| GET | /api/admin/export/users.csv, /export/requests.csv |
-
-## Live notifications
-Events (and admin announcements) create a row in `notifications` and are pushed immediately over the open SSE connection of the user:
-new request (to artisans of that trade and city), new offer, offer accepted/rejected, request cancelled, job done, new review.
-The web app shows a toast, a badge on the bell, and refreshes the open list by itself. Behind Nginx the stream works because
-the response sends `X-Accel-Buffering: no`; a heartbeat every 25 s keeps it open. The app reconnects automatically.
-
-## Web layout
-Under 960 px wide the app is the phone layout (used by the Android/iOS WebViews). From 960 px up it becomes a website:
-top bar with navigation and a notifications popover, multi-column grids, sticky contact card on artisan pages.
-
-## Mobile apps
-Both apps just load the web app from the server and open `tel:`, WhatsApp, mailto and external links in the native apps.
-
-**Android** (Android Studio, open `mobile/android`): debug build points to `http://10.0.2.2:8080/` (emulator → your computer). For a real phone use your computer's LAN IP. Set the HTTPS address of your server in `app/build.gradle.kts` (release `BASE_URL`) before publishing.
-
-**iOS** (Mac + Xcode): `brew install xcodegen && cd mobile/ios && xcodegen generate && open Sanai3i.xcodeproj`. Dev address is in `Config/Debug.xcconfig`, production in `Config/Release.xcconfig`. Add a 1024×1024 app icon to `Assets.xcassets/AppIcon.appiconset`.
-
-## Known limitations
-- Search/filtering is done in memory (fine for thousands of artisans, not millions).
-- Artisan phone numbers are public by design (simple marketplace).
-- No push notifications, no image upload, no OTP phone verification yet.
-- Not yet compiled or run in the authoring environment (Maven Central was unreachable) — run `mvn test` first.
+Built by **Abdelilah El Guennouni** ([@elguennouni-dev](https://github.com/elguennouni-dev)). If you're working on something similar in Morocco or have feedback, open an issue, I read them.
