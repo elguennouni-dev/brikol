@@ -14,7 +14,9 @@ import ma.sanai3i.dto.Dto.ReviewDto;
 import ma.sanai3i.dto.Dto.ServiceDto;
 import ma.sanai3i.dto.Dto.UserDto;
 import ma.sanai3i.domain.Media;
+import ma.sanai3i.repo.ClientReviewRepository;
 import ma.sanai3i.repo.MediaRepository;
+import ma.sanai3i.repo.MessageRepository;
 import ma.sanai3i.repo.ReviewRepository;
 import org.springframework.stereotype.Component;
 
@@ -36,10 +38,15 @@ public class Mapper {
 
     private final ReviewRepository reviews;
     private final MediaRepository media;
+    private final ClientReviewRepository clientReviews;
+    private final MessageRepository messages;
 
-    public Mapper(ReviewRepository reviews, MediaRepository media) {
+    public Mapper(ReviewRepository reviews, MediaRepository media, ClientReviewRepository clientReviews,
+                  MessageRepository messages) {
         this.reviews = reviews;
         this.media = media;
+        this.clientReviews = clientReviews;
+        this.messages = messages;
     }
 
     public Map<Long, Rating> allRatings() {
@@ -91,7 +98,8 @@ public class Mapper {
                 cheapest == null ? null : Integer.valueOf(cheapest.price),
                 cheapest == null ? "" : cheapest.unitAr,
                 cheapest == null ? "" : cheapest.unitFr,
-                a.avatarId == null ? null : "/media/" + a.avatarId);
+                a.avatarId == null ? null : "/media/" + a.avatarId,
+                a.featuredUntil != null && a.featuredUntil.isAfter(java.time.Instant.now()));
     }
 
     public ArtisanDetail detail(ArtisanProfile a, Rating r, List<Review> reviewList) {
@@ -127,11 +135,12 @@ public class Mapper {
      */
     public RequestDto request(JobRequest r, long offerCount, boolean reviewed,
                               List<OfferDto> offers, OfferDto myOffer, String clientPhone, boolean exactPlace) {
-        return request(r, offerCount, reviewed, offers, myOffer, clientPhone, exactPlace, null);
+        return request(r, offerCount, reviewed, offers, myOffer, clientPhone, exactPlace, null, null);
     }
 
+    /** viewerId: the user looking at it (unread chat messages); may be null. */
     public RequestDto request(JobRequest r, long offerCount, boolean reviewed, List<OfferDto> offers, OfferDto myOffer,
-                              String clientPhone, boolean exactPlace, Double distanceKm) {
+                              String clientPhone, boolean exactPlace, Double distanceKm, Long viewerId) {
         Double lat = r.lat;
         Double lng = r.lng;
         String address = r.address;
@@ -150,6 +159,10 @@ public class Mapper {
                 media.findByRequestIdOrderByCreatedAtAsc(r.id).stream().map(MediaService::dto).toList(),
                 r.priceMin != null ? r.priceMin : r.category.minPrice,
                 r.priceMax != null ? r.priceMax : r.category.maxPrice,
-                distanceKm);
+                distanceKm,
+                round1(clientReviews.averageRating(r.client.id)), clientReviews.countByClientId(r.client.id),
+                clientReviews.existsByRequestId(r.id),
+                viewerId == null ? 0 : messages.countByRequestIdAndSenderIdNotAndReadAtIsNull(r.id, viewerId),
+                r.appointmentAt, r.appointmentBy, r.appointmentConfirmed);
     }
 }

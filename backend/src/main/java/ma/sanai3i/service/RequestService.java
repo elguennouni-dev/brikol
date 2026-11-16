@@ -53,11 +53,13 @@ public class RequestService {
     private final AuditService audit;
     private final PricingService pricing;
     private final MediaService media;
+    private final BillingService billing;
 
     public RequestService(JobRequestRepository requests, OfferRepository offers, UserRepository users,
                           CategoryRepository categories, ArtisanProfileRepository artisans,
                           ReviewRepository reviews, Mapper mapper, NotificationService notifications,
-                          AuditService audit, PricingService pricing, MediaService media) {
+                          AuditService audit, PricingService pricing, MediaService media, BillingService billing) {
+        this.billing = billing;
         this.pricing = pricing;
         this.media = media;
         this.requests = requests;
@@ -318,6 +320,7 @@ public class RequestService {
             throw new ApiException(HttpStatus.FORBIDDEN, "TOO_FAR");
         }
         pricing.check(r, in.price());
+        billing.requireActive(a);
         Offer o = new Offer();
         o.request = r;
         o.artisan = a;
@@ -404,7 +407,7 @@ public class RequestService {
             }
         }
         boolean reviewed = r.status == RequestStatus.DONE && reviews.existsByRequestId(r.id);
-        return mapper.request(r, all.size(), reviewed, visible, null, null);
+        return mapper.request(r, all.size(), reviewed, visible, null, null, true, null, r.client.id);
     }
 
     private RequestDto artisanView(JobRequest r, ArtisanProfile a, Offer mine) {
@@ -413,7 +416,7 @@ public class RequestService {
         String clientPhone = accepted ? r.client.phone : null;
         Double d = distance(a, r);
         Double km = d == null ? null : Math.round(d * 2) / 2.0;      // half-km steps: no exact position leak
-        return mapper.request(r, offers.countByRequestId(r.id), false, List.of(), myOffer, clientPhone, accepted, km);
+        return mapper.request(r, offers.countByRequestId(r.id), false, List.of(), myOffer, clientPhone, accepted, km, a.user.id);
     }
 
     private Offer acceptedOffer(JobRequest r) {

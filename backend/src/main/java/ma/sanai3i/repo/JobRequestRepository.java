@@ -19,4 +19,7 @@ public interface JobRequestRepository extends JpaRepository<JobRequest, Long> {
     long countByCategoryId(Long categoryId);
 
     long countByCreatedAtAfter(Instant since);
+
+    List<JobRequest> findByStatusAndAppointmentConfirmedTrueAndReminderSentFalseAndAppointmentAtBetween(
+            RequestStatus status, Instant from, Instant to);
 }

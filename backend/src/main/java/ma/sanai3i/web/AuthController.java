@@ -3,6 +3,10 @@ package ma.sanai3i.web;
 import jakarta.validation.Valid;
 import ma.sanai3i.dto.Dto.AuthResponse;
 import ma.sanai3i.dto.Dto.GoogleAuthRequest;
+import ma.sanai3i.dto.Dto.OtpRequest;
+import ma.sanai3i.dto.Dto.ResetPasswordRequest;
+import ma.sanai3i.service.OtpService;
+import org.springframework.http.ResponseEntity;
 import ma.sanai3i.dto.Dto.LoginRequest;
 import ma.sanai3i.dto.Dto.RegisterRequest;
 import ma.sanai3i.dto.Dto.UserDto;
@@ -21,9 +25,23 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api")
 public class AuthController {
     private final AuthService auth;
+    private final OtpService otp;
 
-    public AuthController(AuthService auth) {
+    public AuthController(AuthService auth, OtpService otp) {
         this.auth = auth;
+        this.otp = otp;
+    }
+
+    /** Sends a 6-digit SMS code. purpose: REGISTER (new account) or RESET (forgotten password). */
+    @PostMapping("/auth/otp")
+    public ResponseEntity<Void> sendOtp(@Valid @RequestBody OtpRequest body) {
+        otp.send(body.phone(), body.purpose(), body.lang());
+        return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/auth/reset")
+    public AuthResponse reset(@Valid @RequestBody ResetPasswordRequest body) {
+        return auth.resetPassword(body);
     }
 
     @PostMapping("/auth/register")

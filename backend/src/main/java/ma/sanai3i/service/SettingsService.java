@@ -33,6 +33,27 @@ public class SettingsService {
         put(BANNER, banner == null ? "" : banner.trim());
     }
 
+    // ---- paid plans
+    public boolean monetizationEnabled() {
+        return "true".equalsIgnoreCase(get("monetizationEnabled", "false"));
+    }
+
+    public int intValue(String key, int fallback) {
+        try {
+            return Integer.parseInt(get(key, String.valueOf(fallback)).trim());
+        } catch (NumberFormatException e) {
+            return fallback;
+        }
+    }
+
+    public String text(String key) {
+        return get(key, "");
+    }
+
+    public void set(String key, String value) {
+        put(key, value == null ? "" : value);
+    }
+
     private String get(String key, String fallback) {
         return repo.findById(key).map(s -> s.value).orElse(fallback);
     }

@@ -68,4 +68,17 @@ public class JobRequest {
 
     @Column(name = "price_max")
     public Integer priceMax;
+
+    /** Appointment proposed by CLIENT or ARTISAN after acceptance, confirmed by the other side. */
+    @Column(name = "appointment_at")
+    public Instant appointmentAt;
+
+    @Column(name = "appointment_by", length = 10)
+    public String appointmentBy;
+
+    @Column(name = "appointment_confirmed", nullable = false)
+    public boolean appointmentConfirmed;
+
+    @Column(name = "reminder_sent", nullable = false)
+    public boolean reminderSent;
 }

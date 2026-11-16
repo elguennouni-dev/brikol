@@ -18,10 +18,12 @@ import java.util.List;
 public class NotificationService {
     private final NotificationRepository repo;
     private final NotificationHub hub;
+    private final ma.sanai3i.push.PushService push;
 
-    public NotificationService(NotificationRepository repo, NotificationHub hub) {
+    public NotificationService(NotificationRepository repo, NotificationHub hub, ma.sanai3i.push.PushService push) {
         this.repo = repo;
         this.hub = hub;
+        this.push = push;
     }
 
     /** Stores the notification and, once the surrounding transaction is committed, pushes it live. */
@@ -35,15 +37,24 @@ public class NotificationService {
         n.detail = detail;
         repo.save(n);
         NotificationDto dto = toDto(n);
+        String name = actorFr != null ? actorFr : actorAr;
+        afterCommit(() -> {
+            hub.publish(userId, dto);
+            push.send(userId, kind, name, detail, "/app/#/notifications");
+        });
+    }
+
+    /** Runs the action once the current transaction is committed (or now when there is none). */
+    public static void afterCommit(Runnable action) {
         if (TransactionSynchronizationManager.isSynchronizationActive()) {
             TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
                 @Override
                 public void afterCommit() {
-                    hub.publish(userId, dto);
+                    action.run();
                 }
             });
         } else {
-            hub.publish(userId, dto);
+            action.run();
         }
     }
 

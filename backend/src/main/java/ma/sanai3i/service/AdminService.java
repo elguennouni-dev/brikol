@@ -75,6 +75,7 @@ public class AdminService {
     private final BlockList blockList;
     private final SettingsService settings;
     private final ArtisanService artisanService;
+    private final ma.sanai3i.repo.ReportRepository reportRepo;
     private final MediaService mediaService;
     private final PasswordEncoder encoder;
     private final Environment env;
@@ -85,7 +86,8 @@ public class AdminService {
                         AuditLogRepository auditLog, AuditService audit, NotificationService notifications,
                         NotificationHub hub, BlockList blockList, SettingsService settings,
                         PasswordEncoder encoder, Environment env, ArtisanService artisanService,
-                        MediaService mediaService) {
+                        MediaService mediaService, ma.sanai3i.repo.ReportRepository reportRepo) {
+        this.reportRepo = reportRepo;
         this.artisanService = artisanService;
         this.mediaService = mediaService;
         this.users = users;
@@ -126,7 +128,7 @@ public class AdminService {
                 requests.countByCreatedAtAfter(weekAgo),
                 offers.count(), allReviews.size(), Math.round(avg * 10.0) / 10.0, artisans.countByVerifiedTrue(),
                 hub.connections(), perDay(requestTimes, 14), perDay(userTimes, 14), perCategory,
-                artisans.countByStatus(ma.sanai3i.domain.ArtisanStatus.PENDING));
+                artisans.countByStatus(ma.sanai3i.domain.ArtisanStatus.PENDING), reportRepo.countByStatus("OPEN"));
     }
 
     private static List<DayCount> perDay(List<Instant> times, int days) {

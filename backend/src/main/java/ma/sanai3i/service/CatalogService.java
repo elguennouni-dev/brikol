@@ -60,7 +60,8 @@ public class CatalogService {
                 .filter(a -> availableToday == null || a.availableToday == availableToday)
                 .filter(a -> needle.isEmpty() || haystack(a).contains(needle))
                 .map(a -> mapper.summary(a, ratings.getOrDefault(a.id, Mapper.NO_RATING)))
-                .sorted(Comparator.comparingDouble(ArtisanSummary::rating).reversed()
+                .sorted(Comparator.comparing(ArtisanSummary::featured).reversed()
+                        .thenComparing(Comparator.comparingDouble(ArtisanSummary::rating).reversed())
                         .thenComparing(Comparator.comparingLong(ArtisanSummary::reviewCount).reversed()))
                 .toList();
     }

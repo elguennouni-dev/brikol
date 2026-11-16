@@ -102,7 +102,7 @@ public final class AdminDto {
                         long requests, long open, long accepted, long done, long cancelled, long newRequests7,
                         long offers, long reviews, double avgRating, long verifiedArtisans, long liveConnections,
                         List<DayCount> requestsPerDay, List<DayCount> usersPerDay, List<CatCount> categories,
-                        long pendingArtisans) {
+                        long pendingArtisans, long openReports) {
     }
 
     public record SystemInfo(String javaVersion, long uptimeSeconds, long heapUsedMb, long heapMaxMb, int processors,

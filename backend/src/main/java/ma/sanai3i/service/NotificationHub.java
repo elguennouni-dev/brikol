@@ -48,6 +48,21 @@ public class NotificationHub {
         }
     }
 
+    /** Any other live event (chat message, ...) as JSON. */
+    public void publishEvent(Long userId, String name, Object data) {
+        List<SseEmitter> list = emitters.get(userId);
+        if (list == null) {
+            return;
+        }
+        for (SseEmitter emitter : list) {
+            try {
+                emitter.send(SseEmitter.event().name(name).data(data, MediaType.APPLICATION_JSON));
+            } catch (IOException | IllegalStateException e) {
+                remove(userId, emitter);
+            }
+        }
+    }
+
     /** A comment line every 25 s keeps idle connections open through proxies and detects dead ones. */
     @Scheduled(fixedRate = 25000)
     public void heartbeat() {

@@ -27,7 +27,16 @@ public final class Dto {
             @NotBlank @Size(max = 80) String city,
             Role role,
             String categoryCode,
-            @Size(max = 80) String neighborhood) {
+            @Size(max = 80) String neighborhood,
+            /** SMS code, required when SMS verification is on */
+            @Size(max = 10) String otp) {
+    }
+
+    public record OtpRequest(@NotBlank String phone, @NotBlank String purpose, String lang) {
+    }
+
+    public record ResetPasswordRequest(@NotBlank String phone, @NotBlank @Size(max = 10) String otp,
+                                       @NotBlank @Size(min = 6, max = 72) String password) {
     }
 
     /** credential = ID token from Google. The other fields are only needed the first time (account creation). */
@@ -36,7 +45,8 @@ public final class Dto {
             String phone,
             Role role,
             String categoryCode,
-            @Size(max = 80) String neighborhood) {
+            @Size(max = 80) String neighborhood,
+            @Size(max = 10) String otp) {
     }
 
     public record LoginRequest(@NotBlank String phone, @NotBlank String password) {
@@ -65,7 +75,9 @@ public final class Dto {
             int yearsExperience, int jobsDone,
             boolean verified, boolean availableToday,
             Integer fromPrice, String fromUnitAr, String fromUnitFr,
-            String avatarUrl) {
+            String avatarUrl,
+            /** paid "featured" placement */
+            boolean featured) {
     }
 
     public record ServiceDto(Long id, String labelAr, String labelFr, int price, String unitAr, String unitFr) {
@@ -170,7 +182,13 @@ public final class Dto {
             /** Allowed price range for budget, offers and counter-offers. */
             int priceMin, int priceMax,
             /** For artisans: distance from their base, in km (null when unknown). */
-            Double distanceKm) {
+            Double distanceKm,
+            /** How artisans rated this client (shown to artisans), and whether this artisan already did. */
+            Double clientRating, long clientReviewCount, boolean clientReviewedByMe,
+            /** Chat messages not read yet by the viewer. */
+            long unreadMessages,
+            /** Appointment: when, proposed by CLIENT or ARTISAN, confirmed by the other side. */
+            Instant appointmentAt, String appointmentBy, boolean appointmentConfirmed) {
     }
 
     // ---------- artisan self-service ----------

@@ -34,12 +34,33 @@ app:
   seed: ${APP_SEED:false}
   # Only needed when the web app is served from another origin (not for the WebView apps)
   cors-origins: ${CORS_ORIGINS:}
+  # public address of the site (links in push notifications, SEO pages)
+  public-url: ${PUBLIC_URL:https://snai3i.elguennouni.site}
   downloads-dir: ${DOWNLOADS_DIR:./downloads}
   # photos, videos, voice notes, artisan documents
   uploads-dir: ${UPLOADS_DIR:./uploads}
   # "Sign in with Google": OAuth client ID of type "Web application" (public value, not a secret)
   google:
     client-id: ${GOOGLE_CLIENT_ID:817026513536-gunfjnt174iopu5fh51drsbf1m11g9bt.apps.googleusercontent.com}
+  # SMS codes (sign-up check, forgotten password). provider: none (feature off), twilio, or log (codes in the logs, tests only)
+  sms:
+    provider: ${SMS_PROVIDER:none}
+    twilio:
+      account-sid: ${TWILIO_ACCOUNT_SID:}
+      auth-token: ${TWILIO_AUTH_TOKEN:}
+      # a Twilio phone number (+1...) or a Messaging Service SID (MG...)
+      from: ${TWILIO_FROM:}
+  # Push notifications (Firebase Cloud Messaging). Empty = off.
+  push:
+    credentials-file: ${FCM_CREDENTIALS:}
+    # web app config (Firebase console > Project settings > Your apps > Web app), public values
+    web-api-key: ${FIREBASE_API_KEY:}
+    web-app-id: ${FIREBASE_APP_ID:}
+    project-id: ${FIREBASE_PROJECT_ID:}
+    sender-id: ${FIREBASE_SENDER_ID:}
+    vapid-key: ${FIREBASE_VAPID_KEY:}
+  rate-limit:
+    enabled: ${RATE_LIMIT:true}
   # The first administrator is created at start-up when both are set (see AdminBootstrap)
   admin:
     phone: ${ADMIN_PHONE:}

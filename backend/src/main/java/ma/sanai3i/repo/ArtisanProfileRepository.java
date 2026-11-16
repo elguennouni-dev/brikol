@@ -21,5 +21,7 @@ public interface ArtisanProfileRepository extends JpaRepository<ArtisanProfile, 
 
     long countByStatus(ma.sanai3i.domain.ArtisanStatus status);
 
+    List<ArtisanProfile> findBySubscriptionUntilBetween(java.time.Instant from, java.time.Instant to);
+
     List<ArtisanProfile> findByStatusOrderBySubmittedAtAsc(ma.sanai3i.domain.ArtisanStatus status);
 }

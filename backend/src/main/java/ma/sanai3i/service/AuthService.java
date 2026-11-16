@@ -8,6 +8,8 @@ import ma.sanai3i.domain.Role;
 import ma.sanai3i.domain.User;
 import ma.sanai3i.dto.Dto.AuthResponse;
 import ma.sanai3i.dto.Dto.GoogleAuthRequest;
+import ma.sanai3i.dto.Dto.ResetPasswordRequest;
+import ma.sanai3i.security.RateLimiter;
 import ma.sanai3i.dto.Dto.LoginRequest;
 import ma.sanai3i.dto.Dto.RegisterRequest;
 import ma.sanai3i.dto.Dto.UserDto;
@@ -40,12 +42,17 @@ public class AuthService {
     private final AuditService audit;
     private final SettingsService settings;
     private final GoogleVerifier google;
+    private final OtpService otp;
+    private final RateLimiter limiter;
     private final SecureRandom random = new SecureRandom();
 
     public AuthService(UserRepository users, CategoryRepository categories, ArtisanProfileRepository artisans,
                        PasswordEncoder encoder, JwtService jwt, Mapper mapper,
-                       AuditService audit, SettingsService settings, GoogleVerifier google) {
+                       AuditService audit, SettingsService settings, GoogleVerifier google,
+                       OtpService otp, RateLimiter limiter) {
         this.google = google;
+        this.otp = otp;
+        this.limiter = limiter;
         this.users = users;
         this.categories = categories;
         this.artisans = artisans;
@@ -57,9 +64,39 @@ public class AuthService {
     }
 
     public AuthResponse register(RegisterRequest in) {
+        boolean verified = checkOtp(in.phone(), in.otp());
         User user = createAccount(in.phone(), in.fullName(), in.city(), in.role(), in.categoryCode(), in.neighborhood(),
                 encoder.encode(in.password()), null, null);
+        user.phoneVerified = verified;
         return issue(user);
+    }
+
+    /** When SMS is on, a new account needs the code sent to its phone. Returns true when the phone was verified. */
+    private boolean checkOtp(String rawPhone, String code) {
+        if (!otp.enabled()) {
+            return false;
+        }
+        String phone = Phones.normalize(rawPhone);
+        if (users.existsByPhone(phone)) {
+            throw new ApiException(HttpStatus.CONFLICT, "PHONE_TAKEN");
+        }
+        otp.verify(phone, OtpService.REGISTER, code);
+        return true;
+    }
+
+    /** Forgotten password: SMS code, new password, then signed in. */
+    public AuthResponse resetPassword(ResetPasswordRequest in) {
+        if (!otp.enabled()) {
+            throw new ApiException(HttpStatus.CONFLICT, "SMS_DISABLED");
+        }
+        String phone = Phones.normalize(in.phone());
+        otp.verify(phone, OtpService.RESET, in.otp());
+        User user = users.findByPhone(phone).orElseThrow(() -> new ApiException(HttpStatus.BAD_REQUEST, "OTP_INVALID"));
+        user.passwordHash = encoder.encode(in.password());
+        user.phoneVerified = true;
+        limiter.reset("loginfail:" + phone);
+        audit.logUser(user, "PASSWORD_RESET_SMS", "USER", user.id, null);
+        return loginChecked(user, "LOGIN");
     }
 
     /**
@@ -86,12 +123,14 @@ public class AuthService {
         if (in.phone() == null || in.phone().isBlank() || in.role() == null) {
             throw new ApiException(HttpStatus.PRECONDITION_REQUIRED, "GOOGLE_SIGNUP_NEEDED");
         }
+        boolean verified = checkOtp(in.phone(), in.otp());
         // nobody knows this password: the account signs in with Google (an admin can still reset it)
         byte[] noise = new byte[24];
         random.nextBytes(noise);
         String name = g.name() == null || g.name().isBlank() ? email.substring(0, email.indexOf('@')) : g.name().trim();
         User created = createAccount(in.phone(), name.length() > 120 ? name.substring(0, 120) : name, null, in.role(),
                 in.categoryCode(), in.neighborhood(), encoder.encode(Base64.getEncoder().encodeToString(noise)), email, g.sub());
+        created.phoneVerified = verified;
         return issue(created);
     }
 
@@ -163,8 +202,13 @@ public class AuthService {
         } catch (ApiException e) {
             throw new ApiException(HttpStatus.UNAUTHORIZED, "INVALID_CREDENTIALS");
         }
+        // brute force: 8 wrong passwords for a number in 15 minutes lock it for the rest of the window
+        if (limiter.count("loginfail:" + phone, 15 * 60_000L) >= 8) {
+            throw new ApiException(HttpStatus.TOO_MANY_REQUESTS, "TOO_MANY_ATTEMPTS");
+        }
         User found = users.findByPhone(phone).orElse(null);
         if (found == null || !encoder.matches(in.password(), found.passwordHash)) {
+            limiter.record("loginfail:" + phone);
             audit.log(found == null ? null : found.id, phone, "LOGIN_FAILED", "USER", found == null ? null : found.id, null);
             throw new ApiException(HttpStatus.UNAUTHORIZED, "INVALID_CREDENTIALS");
         }

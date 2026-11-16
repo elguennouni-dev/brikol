@@ -56,6 +56,9 @@ public class User {
     @Column(name = "google_sub", length = 64)
     public String googleSub;
 
+    @Column(name = "phone_verified", nullable = false)
+    public boolean phoneVerified;
+
     @Column(name = "last_login_at")
     public Instant lastLoginAt;
 }

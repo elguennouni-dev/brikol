@@ -108,6 +108,13 @@ public class ArtisanProfile {
     @Column(name = "reviewed_at")
     public Instant reviewedAt;
 
+    // ---- paid plans (recorded by an admin, paid outside the app)
+    @Column(name = "subscription_until")
+    public Instant subscriptionUntil;
+
+    @Column(name = "featured_until")
+    public Instant featuredUntil;
+
     @OneToMany(mappedBy = "artisan", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     @OrderBy("id ASC")
     public List<ServiceItem> services = new ArrayList<>();
