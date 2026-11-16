@@ -50,7 +50,8 @@ public final class AdminDto {
 
     public record RequestDetail(RequestRow request, String description, String neighborhood, String whenPref,
                                 List<OfferRow> offers, Integer reviewRating, String reviewBody,
-                                Double lat, Double lng, String address) {
+                                Double lat, Double lng, String address, List<ma.sanai3i.dto.Dto.MediaDto> media,
+                                int priceMin, int priceMax) {
     }
 
     public record CancelInput(@Size(max = 160) String reason) {
@@ -62,13 +63,28 @@ public final class AdminDto {
 
     // ---------- categories
     public record CategoryRow(Long id, String code, String nameAr, String nameFr, int sortOrder, long artisans,
-                              long requests) {
+                              long requests, int minPrice, int maxPrice) {
     }
 
     public record CategoryInput(@NotBlank @Size(max = 30) @Pattern(regexp = "[a-z0-9_-]+") String code,
                                 @NotBlank @Size(max = 60) String nameAr,
                                 @NotBlank @Size(max = 60) String nameFr,
-                                int sortOrder) {
+                                int sortOrder,
+                                @jakarta.validation.constraints.Min(0) @jakarta.validation.constraints.Max(1000000) Integer minPrice,
+                                @jakarta.validation.constraints.Min(1) @jakarta.validation.constraints.Max(1000000) Integer maxPrice) {
+    }
+
+    // ---------- artisan activation
+    public record ArtisanReviewRow(Long artisanId, Long userId, String fullName, String phone, String categoryCode,
+                                   String categoryNameAr, String categoryNameFr, String city, String status,
+                                   Instant createdAt, Instant submittedAt) {
+    }
+
+    public record ArtisanReview(Long artisanId, Long userId, String phone, String email, Instant createdAt,
+                                Instant submittedAt, Instant reviewedAt, ma.sanai3i.dto.Dto.OnboardingDto file) {
+    }
+
+    public record ReviewDecision(@Size(max = 300) String reason) {
     }
 
     // ---------- trail, dashboard, system
@@ -85,7 +101,8 @@ public final class AdminDto {
     public record Stats(long users, long clients, long artisans, long admins, long blocked, long newUsers7,
                         long requests, long open, long accepted, long done, long cancelled, long newRequests7,
                         long offers, long reviews, double avgRating, long verifiedArtisans, long liveConnections,
-                        List<DayCount> requestsPerDay, List<DayCount> usersPerDay, List<CatCount> categories) {
+                        List<DayCount> requestsPerDay, List<DayCount> usersPerDay, List<CatCount> categories,
+                        long pendingArtisans) {
     }
 
     public record SystemInfo(String javaVersion, long uptimeSeconds, long heapUsedMb, long heapMaxMb, int processors,

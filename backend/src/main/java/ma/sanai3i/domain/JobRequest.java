@@ -61,4 +61,11 @@ public class JobRequest {
     public Double lng;
     @Column(length = 200)
     public String address;
+
+    /** Price range allowed for this request (computed when it is created, see PricingService). */
+    @Column(name = "price_min")
+    public Integer priceMin;
+
+    @Column(name = "price_max")
+    public Integer priceMax;
 }

@@ -74,6 +74,8 @@ public class AdminService {
     private final NotificationHub hub;
     private final BlockList blockList;
     private final SettingsService settings;
+    private final ArtisanService artisanService;
+    private final MediaService mediaService;
     private final PasswordEncoder encoder;
     private final Environment env;
     private final SecureRandom random = new SecureRandom();
@@ -82,7 +84,10 @@ public class AdminService {
                         OfferRepository offers, ReviewRepository reviews, CategoryRepository categories,
                         AuditLogRepository auditLog, AuditService audit, NotificationService notifications,
                         NotificationHub hub, BlockList blockList, SettingsService settings,
-                        PasswordEncoder encoder, Environment env) {
+                        PasswordEncoder encoder, Environment env, ArtisanService artisanService,
+                        MediaService mediaService) {
+        this.artisanService = artisanService;
+        this.mediaService = mediaService;
         this.users = users;
         this.artisans = artisans;
         this.requests = requests;
@@ -120,7 +125,8 @@ public class AdminService {
                 requests.countByStatus(RequestStatus.DONE), requests.countByStatus(RequestStatus.CANCELLED),
                 requests.countByCreatedAtAfter(weekAgo),
                 offers.count(), allReviews.size(), Math.round(avg * 10.0) / 10.0, artisans.countByVerifiedTrue(),
-                hub.connections(), perDay(requestTimes, 14), perDay(userTimes, 14), perCategory);
+                hub.connections(), perDay(requestTimes, 14), perDay(userTimes, 14), perCategory,
+                artisans.countByStatus(ma.sanai3i.domain.ArtisanStatus.PENDING));
     }
 
     private static List<DayCount> perDay(List<Instant> times, int days) {
@@ -261,7 +267,9 @@ public class AdminService {
                 .map(o -> new OfferRow(o.id, o.artisan.nameFr, o.price, o.status.name(), o.etaText, o.message)).toList();
         Review review = reviews.findAll().stream().filter(x -> r.id.equals(x.requestId)).findFirst().orElse(null);
         return new RequestDetail(requestRow(r), r.description, r.neighborhood, r.whenPref.name(), rows,
-                review == null ? null : review.rating, review == null ? null : review.body, r.lat, r.lng, r.address);
+                review == null ? null : review.rating, review == null ? null : review.body, r.lat, r.lng, r.address,
+                mediaService.ofRequest(r.id),
+                r.priceMin != null ? r.priceMin : r.category.minPrice, r.priceMax != null ? r.priceMax : r.category.maxPrice);
     }
 
     public RequestRow cancelRequest(AuthUser admin, Long id, String reason) {
@@ -312,6 +320,7 @@ public class AdminService {
         c.nameAr = in.nameAr().trim();
         c.nameFr = in.nameFr().trim();
         c.sortOrder = in.sortOrder();
+        applyPrices(c, in);
         categories.save(c);
         log(admin, "CATEGORY_CREATED", "CATEGORY", c.id, c.code);
         return categoryRow(c);
@@ -323,6 +332,7 @@ public class AdminService {
         c.nameAr = in.nameAr().trim();
         c.nameFr = in.nameFr().trim();
         c.sortOrder = in.sortOrder();
+        applyPrices(c, in);
         log(admin, "CATEGORY_UPDATED", "CATEGORY", c.id, c.code);
         return categoryRow(c);
     }
@@ -334,6 +344,70 @@ public class AdminService {
         }
         categories.delete(c);
         log(admin, "CATEGORY_DELETED", "CATEGORY", id, c.code);
+    }
+
+    private static void applyPrices(Category c, CategoryInput in) {
+        int min = in.minPrice() == null ? c.minPrice : in.minPrice();
+        int max = in.maxPrice() == null ? c.maxPrice : in.maxPrice();
+        if (max <= min) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "PRICE_BOUNDS");
+        }
+        c.minPrice = min;
+        c.maxPrice = max;
+    }
+
+    // ------------------------------------------------------------------ artisan activation
+
+    @Transactional(readOnly = true)
+    public List<ma.sanai3i.dto.AdminDto.ArtisanReviewRow> artisanFiles(String status) {
+        ma.sanai3i.domain.ArtisanStatus wanted = isBlank(status) ? ma.sanai3i.domain.ArtisanStatus.PENDING
+                : ma.sanai3i.domain.ArtisanStatus.valueOf(status.trim().toUpperCase(Locale.ROOT));
+        return artisans.findByStatusOrderBySubmittedAtAsc(wanted).stream()
+                .map(a -> new ma.sanai3i.dto.AdminDto.ArtisanReviewRow(a.id, a.user.id, a.user.fullName, a.user.phone,
+                        a.category.code, a.category.nameAr, a.category.nameFr, a.city, a.status.name(), a.createdAt, a.submittedAt))
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public ma.sanai3i.dto.AdminDto.ArtisanReview artisanFile(Long artisanId) {
+        ArtisanProfile a = findArtisan(artisanId);
+        return new ma.sanai3i.dto.AdminDto.ArtisanReview(a.id, a.user.id, a.user.phone, a.user.email, a.createdAt,
+                a.submittedAt, a.reviewedAt, artisanService.onboardingOf(a));
+    }
+
+    public ma.sanai3i.dto.AdminDto.ArtisanReview approveArtisan(AuthUser admin, Long artisanId) {
+        ArtisanProfile a = findArtisan(artisanId);
+        if (a.status != ma.sanai3i.domain.ArtisanStatus.PENDING) {
+            throw new ApiException(HttpStatus.CONFLICT, "NOT_PENDING");
+        }
+        a.status = ma.sanai3i.domain.ArtisanStatus.APPROVED;
+        a.verified = true;                 // identity checked by an admin
+        a.rejectionReason = null;
+        a.reviewedAt = Instant.now();
+        notifications.notify(a.user.id, "ARTISAN_APPROVED", null, null, null, null);
+        log(admin, "ARTISAN_APPROVED", "USER", a.user.id, a.user.fullName);
+        return artisanFile(artisanId);
+    }
+
+    public ma.sanai3i.dto.AdminDto.ArtisanReview rejectArtisan(AuthUser admin, Long artisanId, String reason) {
+        ArtisanProfile a = findArtisan(artisanId);
+        if (a.status != ma.sanai3i.domain.ArtisanStatus.PENDING) {
+            throw new ApiException(HttpStatus.CONFLICT, "NOT_PENDING");
+        }
+        if (isBlank(reason)) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "REASON_REQUIRED");
+        }
+        a.status = ma.sanai3i.domain.ArtisanStatus.REJECTED;
+        a.rejectionReason = reason.trim();
+        a.reviewedAt = Instant.now();
+        String note = a.rejectionReason.length() > 150 ? a.rejectionReason.substring(0, 150) + "…" : a.rejectionReason;
+        notifications.notify(a.user.id, "ARTISAN_REJECTED", null, null, null, note);
+        log(admin, "ARTISAN_REJECTED", "USER", a.user.id, a.user.fullName + " · " + note);
+        return artisanFile(artisanId);
+    }
+
+    private ArtisanProfile findArtisan(Long id) {
+        return artisans.findById(id).orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "ARTISAN_NOT_FOUND"));
     }
 
     // ------------------------------------------------------------------ trail, broadcast, settings
@@ -417,7 +491,7 @@ public class AdminService {
 
     private CategoryRow categoryRow(Category c) {
         return new CategoryRow(c.id, c.code, c.nameAr, c.nameFr, c.sortOrder, artisans.countByCategoryId(c.id),
-                requests.countByCategoryId(c.id));
+                requests.countByCategoryId(c.id), c.minPrice, c.maxPrice);
     }
 
     private AuditRow auditRow(AuditLog l) {

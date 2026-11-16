@@ -55,6 +55,7 @@ public class CatalogService {
         Map<Long, Mapper.Rating> ratings = mapper.allRatings();
 
         return base.stream()
+                .filter(a -> a.status == ma.sanai3i.domain.ArtisanStatus.APPROVED)
                 .filter(a -> wantedCity.isEmpty() || ma.sanai3i.common.Cities.same(a.city, wantedCity))
                 .filter(a -> availableToday == null || a.availableToday == availableToday)
                 .filter(a -> needle.isEmpty() || haystack(a).contains(needle))
@@ -66,6 +67,7 @@ public class CatalogService {
 
     public ArtisanDetail artisan(Long id) {
         ArtisanProfile a = artisans.findById(id)
+                .filter(x -> x.status == ma.sanai3i.domain.ArtisanStatus.APPROVED)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "ARTISAN_NOT_FOUND"));
         return mapper.detail(a, mapper.ratingOf(a.id), reviews.findByArtisanIdOrderByCreatedAtDesc(a.id));
     }

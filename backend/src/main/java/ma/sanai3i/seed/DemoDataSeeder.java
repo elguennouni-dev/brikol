@@ -222,6 +222,7 @@ public class DemoDataSeeder implements ApplicationRunner {
         a.jobsDone = jobs;
         a.verified = verified;
         a.availableToday = availableToday;
+        a.status = ma.sanai3i.domain.ArtisanStatus.APPROVED;
         a.whatsapp = phone;
         for (Object[] s : services) {
             ServiceItem item = new ServiceItem();

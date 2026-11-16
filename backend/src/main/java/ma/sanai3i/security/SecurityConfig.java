@@ -53,7 +53,7 @@ public class SecurityConfig {
         CorsConfiguration config = new CorsConfiguration();
         if (!origins.isBlank()) {
             config.setAllowedOrigins(Arrays.stream(origins.split(",")).map(String::trim).toList());
-            config.setAllowedMethods(List.of("GET", "POST", "PATCH", "DELETE", "OPTIONS"));
+            config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
             config.setAllowedHeaders(List.of("*"));
         }
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();

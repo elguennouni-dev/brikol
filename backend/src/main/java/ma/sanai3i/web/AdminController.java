@@ -100,6 +100,28 @@ public class AdminController {
         return admin.verify(me, id, body.verified());
     }
 
+    // ---- artisan activation
+    @GetMapping("/artisan-files")
+    public List<ma.sanai3i.dto.AdminDto.ArtisanReviewRow> artisanFiles(@RequestParam(required = false) String status) {
+        return admin.artisanFiles(status);
+    }
+
+    @GetMapping("/artisan-files/{id}")
+    public ma.sanai3i.dto.AdminDto.ArtisanReview artisanFile(@PathVariable Long id) {
+        return admin.artisanFile(id);
+    }
+
+    @PostMapping("/artisan-files/{id}/approve")
+    public ma.sanai3i.dto.AdminDto.ArtisanReview approve(@AuthenticationPrincipal AuthUser me, @PathVariable Long id) {
+        return admin.approveArtisan(me, id);
+    }
+
+    @PostMapping("/artisan-files/{id}/reject")
+    public ma.sanai3i.dto.AdminDto.ArtisanReview reject(@AuthenticationPrincipal AuthUser me, @PathVariable Long id,
+                                                        @Valid @RequestBody ma.sanai3i.dto.AdminDto.ReviewDecision body) {
+        return admin.rejectArtisan(me, id, body.reason());
+    }
+
     // ---- requests and reviews
     @GetMapping("/requests")
     public PageOf<RequestRow> requests(@RequestParam(required = false) String q, @RequestParam(required = false) String status,

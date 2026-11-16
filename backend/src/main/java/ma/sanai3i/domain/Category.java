@@ -25,4 +25,11 @@ public class Category {
 
     @Column(name = "sort_order", nullable = false)
     public int sortOrder;
+
+    /** Hard price bounds of the trade, in MAD (set by the admin). */
+    @Column(name = "min_price", nullable = false)
+    public int minPrice = 100;
+
+    @Column(name = "max_price", nullable = false)
+    public int maxPrice = 50000;
 }

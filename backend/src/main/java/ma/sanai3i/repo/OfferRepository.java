@@ -16,4 +16,9 @@ public interface OfferRepository extends JpaRepository<Offer, Long> {
     long countByRequestId(Long requestId);
 
     long countByArtisanId(Long artisanId);
+
+    @org.springframework.data.jpa.repository.Query("select o.price from Offer o where o.status = ma.sanai3i.domain.OfferStatus.ACCEPTED "
+            + "and o.request.category.id = :categoryId and o.createdAt > :since")
+    List<Integer> acceptedPricesSince(@org.springframework.data.repository.query.Param("categoryId") Long categoryId,
+                                      @org.springframework.data.repository.query.Param("since") java.time.Instant since);
 }

@@ -17,6 +17,10 @@ spring:
       hibernate:
         jdbc:
           time_zone: UTC
+  servlet:
+    multipart:
+      max-file-size: 60MB
+      max-request-size: 65MB
   flyway:
     enabled: true
     locations: classpath:db/migration
@@ -31,6 +35,8 @@ app:
   # Only needed when the web app is served from another origin (not for the WebView apps)
   cors-origins: ${CORS_ORIGINS:}
   downloads-dir: ${DOWNLOADS_DIR:./downloads}
+  # photos, videos, voice notes, artisan documents
+  uploads-dir: ${UPLOADS_DIR:./uploads}
   # "Sign in with Google": OAuth client ID of type "Web application" (public value, not a secret)
   google:
     client-id: ${GOOGLE_CLIENT_ID:817026513536-gunfjnt174iopu5fh51drsbf1m11g9bt.apps.googleusercontent.com}

@@ -31,6 +31,18 @@ public class GlobalExceptionHandler {
         return ResponseEntity.badRequest().body(new ErrorBody("VALIDATION", fields));
     }
 
+    @ExceptionHandler(org.springframework.web.multipart.MaxUploadSizeExceededException.class)
+    public ResponseEntity<ErrorBody> tooBig(Exception e) {
+        return ResponseEntity.status(413).body(new ErrorBody("FILE_TOO_BIG", Map.of()));
+    }
+
+    @ExceptionHandler({org.springframework.web.multipart.support.MissingServletRequestPartException.class,
+            org.springframework.web.bind.MissingServletRequestParameterException.class,
+            org.springframework.web.multipart.MultipartException.class})
+    public ResponseEntity<ErrorBody> badUpload(Exception e) {
+        return ResponseEntity.badRequest().body(new ErrorBody("FILE_EMPTY", Map.of()));
+    }
+
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<ErrorBody> badJson(HttpMessageNotReadableException e) {
         return ResponseEntity.badRequest().body(new ErrorBody("BAD_REQUEST", Map.of()));

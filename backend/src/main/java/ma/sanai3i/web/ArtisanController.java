@@ -2,6 +2,8 @@ package ma.sanai3i.web;
 
 import jakarta.validation.Valid;
 import ma.sanai3i.dto.Dto.ArtisanDetail;
+import ma.sanai3i.dto.Dto.OnboardingDto;
+import ma.sanai3i.dto.Dto.OnboardingInput;
 import ma.sanai3i.dto.Dto.ServiceRequest;
 import ma.sanai3i.dto.Dto.UpdateArtisanProfile;
 import ma.sanai3i.security.AuthUser;
@@ -12,6 +14,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -33,6 +36,21 @@ public class ArtisanController {
     @PatchMapping
     public ArtisanDetail update(@AuthenticationPrincipal AuthUser me, @Valid @RequestBody UpdateArtisanProfile body) {
         return service.update(me, body);
+    }
+
+    @GetMapping("/onboarding")
+    public OnboardingDto onboarding(@AuthenticationPrincipal AuthUser me) {
+        return service.onboarding(me);
+    }
+
+    @PutMapping("/onboarding")
+    public OnboardingDto saveOnboarding(@AuthenticationPrincipal AuthUser me, @Valid @RequestBody OnboardingInput body) {
+        return service.saveOnboarding(me, body);
+    }
+
+    @PostMapping("/onboarding/submit")
+    public OnboardingDto submit(@AuthenticationPrincipal AuthUser me) {
+        return service.submit(me);
     }
 
     @PostMapping("/services")

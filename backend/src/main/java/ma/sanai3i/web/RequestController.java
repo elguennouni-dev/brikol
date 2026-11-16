@@ -1,6 +1,7 @@
 package ma.sanai3i.web;
 
 import jakarta.validation.Valid;
+import ma.sanai3i.dto.Dto.CounterOffer;
 import ma.sanai3i.dto.Dto.CreateOffer;
 import ma.sanai3i.dto.Dto.CreateRequest;
 import ma.sanai3i.dto.Dto.OfferDto;
@@ -54,6 +55,12 @@ public class RequestController {
         return service.accept(me, id, offerId);
     }
 
+    @PostMapping("/requests/{id}/offers/{offerId}/counter")
+    public RequestDto counter(@AuthenticationPrincipal AuthUser me, @PathVariable Long id, @PathVariable Long offerId,
+                              @Valid @RequestBody CounterOffer body) {
+        return service.counter(me, id, offerId, body);
+    }
+
     @PostMapping("/requests/{id}/cancel")
     public RequestDto cancel(@AuthenticationPrincipal AuthUser me, @PathVariable Long id) {
         return service.cancel(me, id);
@@ -77,6 +84,17 @@ public class RequestController {
     public OfferDto offer(@AuthenticationPrincipal AuthUser me, @PathVariable Long id,
                           @Valid @RequestBody CreateOffer body) {
         return service.offer(me, id, body);
+    }
+
+    @PostMapping("/artisan/offers/{offerId}/counter")
+    public RequestDto artisanCounter(@AuthenticationPrincipal AuthUser me, @PathVariable Long offerId,
+                                     @Valid @RequestBody CounterOffer body) {
+        return service.artisanCounter(me, offerId, body);
+    }
+
+    @PostMapping("/artisan/offers/{offerId}/agree")
+    public RequestDto artisanAgree(@AuthenticationPrincipal AuthUser me, @PathVariable Long offerId) {
+        return service.artisanAgree(me, offerId);
     }
 
     @GetMapping("/artisan/requests")

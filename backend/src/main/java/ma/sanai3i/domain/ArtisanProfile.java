@@ -77,6 +77,37 @@ public class ArtisanProfile {
     @Column(name = "created_at", nullable = false)
     public Instant createdAt = Instant.now();
 
+    // ---- activation (reviewed by an admin)
+    @jakarta.persistence.Enumerated(jakarta.persistence.EnumType.STRING)
+    @Column(nullable = false, length = 12)
+    public ArtisanStatus status = ArtisanStatus.DRAFT;
+
+    @Column(name = "rejection_reason", length = 300)
+    public String rejectionReason;
+
+    /** Moroccan national ID card number (CIN). */
+    @Column(length = 20)
+    public String cin;
+
+    /** Workshop / base location and how far he travels. */
+    public Double lat;
+    public Double lng;
+
+    @Column(length = 200)
+    public String address;
+
+    @Column(name = "radius_km", nullable = false)
+    public int radiusKm = 15;
+
+    @Column(name = "avatar_id", length = 36)
+    public String avatarId;
+
+    @Column(name = "submitted_at")
+    public Instant submittedAt;
+
+    @Column(name = "reviewed_at")
+    public Instant reviewedAt;
+
     @OneToMany(mappedBy = "artisan", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     @OrderBy("id ASC")
     public List<ServiceItem> services = new ArrayList<>();

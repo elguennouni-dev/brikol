@@ -13,6 +13,8 @@ import ma.sanai3i.dto.Dto.RequestDto;
 import ma.sanai3i.dto.Dto.ReviewDto;
 import ma.sanai3i.dto.Dto.ServiceDto;
 import ma.sanai3i.dto.Dto.UserDto;
+import ma.sanai3i.domain.Media;
+import ma.sanai3i.repo.MediaRepository;
 import ma.sanai3i.repo.ReviewRepository;
 import org.springframework.stereotype.Component;
 
@@ -29,10 +31,15 @@ public class Mapper {
 
     public static final Rating NO_RATING = new Rating(0.0, 0L);
 
-    private final ReviewRepository reviews;
+    /** Counter-offers allowed on one offer (client and artisan together). */
+    public static final int MAX_ROUNDS = 6;
 
-    public Mapper(ReviewRepository reviews) {
+    private final ReviewRepository reviews;
+    private final MediaRepository media;
+
+    public Mapper(ReviewRepository reviews, MediaRepository media) {
         this.reviews = reviews;
+        this.media = media;
     }
 
     public Map<Long, Rating> allRatings() {
@@ -68,7 +75,8 @@ public class Mapper {
     }
 
     public UserDto user(User u, ArtisanProfile profile) {
-        return new UserDto(u.id, u.phone, u.fullName, u.role, u.city, profile == null ? null : profile.id);
+        return new UserDto(u.id, u.phone, u.fullName, u.role, u.city, profile == null ? null : profile.id,
+                profile == null ? null : profile.status.name());
     }
 
     public ArtisanSummary summary(ArtisanProfile a, Rating r) {
@@ -82,7 +90,8 @@ public class Mapper {
                 a.verified, a.availableToday,
                 cheapest == null ? null : Integer.valueOf(cheapest.price),
                 cheapest == null ? "" : cheapest.unitAr,
-                cheapest == null ? "" : cheapest.unitFr);
+                cheapest == null ? "" : cheapest.unitFr,
+                a.avatarId == null ? null : "/media/" + a.avatarId);
     }
 
     public ArtisanDetail detail(ArtisanProfile a, Rating r, List<Review> reviewList) {
@@ -93,7 +102,8 @@ public class Mapper {
                 .limit(20)
                 .map(x -> new ReviewDto(x.id, shortName(x.client.fullName), x.rating, x.body, x.createdAt))
                 .toList();
-        return new ArtisanDetail(summary(a, r), a.bioAr, a.bioFr, a.user.phone, a.whatsapp, services, reviewDtos);
+        return new ArtisanDetail(summary(a, r), a.bioAr, a.bioFr, a.user.phone, a.whatsapp, services, reviewDtos,
+                media.findByArtisanIdAndPurposeOrderByCreatedAtAsc(a.id, Media.PORTFOLIO).stream().map(MediaService::dto).toList());
     }
 
     public OfferDto offer(Offer o, Rating rating, boolean withPhone) {
@@ -102,7 +112,8 @@ public class Mapper {
                 o.id, o.request.id, a.id, a.nameAr, a.nameFr,
                 rating.average(), rating.count(),
                 o.price, o.etaText, o.message, o.status, o.createdAt,
-                withPhone ? a.user.phone : null);
+                withPhone ? a.user.phone : null,
+                o.lastBy, o.rounds, MAX_ROUNDS, o.firstPrice);
     }
 
     public RequestDto request(JobRequest r, long offerCount, boolean reviewed,
@@ -116,6 +127,11 @@ public class Mapper {
      */
     public RequestDto request(JobRequest r, long offerCount, boolean reviewed,
                               List<OfferDto> offers, OfferDto myOffer, String clientPhone, boolean exactPlace) {
+        return request(r, offerCount, reviewed, offers, myOffer, clientPhone, exactPlace, null);
+    }
+
+    public RequestDto request(JobRequest r, long offerCount, boolean reviewed, List<OfferDto> offers, OfferDto myOffer,
+                              String clientPhone, boolean exactPlace, Double distanceKm) {
         Double lat = r.lat;
         Double lng = r.lng;
         String address = r.address;
@@ -130,6 +146,10 @@ public class Mapper {
                 r.whenPref, r.budget, r.status, r.createdAt,
                 shortName(r.client.fullName), clientPhone,
                 offerCount, r.acceptedOfferId, reviewed,
-                offers, myOffer, lat, lng, address);
+                offers, myOffer, lat, lng, address,
+                media.findByRequestIdOrderByCreatedAtAsc(r.id).stream().map(MediaService::dto).toList(),
+                r.priceMin != null ? r.priceMin : r.category.minPrice,
+                r.priceMax != null ? r.priceMax : r.category.maxPrice,
+                distanceKm);
     }
 }

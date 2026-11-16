@@ -44,4 +44,14 @@ public class Offer {
 
     @Column(name = "created_at", nullable = false)
     public Instant createdAt = Instant.now();
+
+    /** Negotiation: price is the current proposal; lastBy = who proposed it (ARTISAN or CLIENT). */
+    @Column(name = "last_by", nullable = false, length = 10)
+    public String lastBy = "ARTISAN";
+
+    @Column(nullable = false)
+    public int rounds;
+
+    @Column(name = "first_price")
+    public Integer firstPrice;
 }

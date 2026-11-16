@@ -16,3 +16,5 @@ mobile/ios/build/
 .vscode/
 *.iml
 .DS_Store
+backend/uploads/
+deploy/uploads/

@@ -18,4 +18,8 @@ public interface ArtisanProfileRepository extends JpaRepository<ArtisanProfile, 
     long countByCategoryId(Long categoryId);
 
     long countByVerifiedTrue();
+
+    long countByStatus(ma.sanai3i.domain.ArtisanStatus status);
+
+    List<ArtisanProfile> findByStatusOrderBySubmittedAtAsc(ma.sanai3i.domain.ArtisanStatus status);
 }

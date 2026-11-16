@@ -2,6 +2,8 @@ package ma.sanai3i.service;
 
 import ma.sanai3i.common.ApiException;
 import ma.sanai3i.common.Cities;
+import ma.sanai3i.common.Geo;
+import ma.sanai3i.domain.ArtisanStatus;
 import ma.sanai3i.domain.ArtisanProfile;
 import ma.sanai3i.domain.Category;
 import ma.sanai3i.domain.JobRequest;
@@ -12,6 +14,7 @@ import ma.sanai3i.domain.Review;
 import ma.sanai3i.domain.Role;
 import ma.sanai3i.domain.User;
 import ma.sanai3i.domain.WhenPref;
+import ma.sanai3i.dto.Dto.CounterOffer;
 import ma.sanai3i.dto.Dto.CreateOffer;
 import ma.sanai3i.dto.Dto.CreateRequest;
 import ma.sanai3i.dto.Dto.OfferDto;
@@ -48,11 +51,15 @@ public class RequestService {
     private final Mapper mapper;
     private final NotificationService notifications;
     private final AuditService audit;
+    private final PricingService pricing;
+    private final MediaService media;
 
     public RequestService(JobRequestRepository requests, OfferRepository offers, UserRepository users,
                           CategoryRepository categories, ArtisanProfileRepository artisans,
                           ReviewRepository reviews, Mapper mapper, NotificationService notifications,
-                          AuditService audit) {
+                          AuditService audit, PricingService pricing, MediaService media) {
+        this.pricing = pricing;
+        this.media = media;
         this.requests = requests;
         this.offers = offers;
         this.users = users;
@@ -87,13 +94,18 @@ public class RequestService {
         }
         r.address = isBlank(in.address()) ? null : in.address().trim();
         r.whenPref = in.whenPref() == null ? WhenPref.FLEXIBLE : in.whenPref();
+        PricingService.Range range = pricing.range(category);
+        r.priceMin = range.min();
+        r.priceMax = range.max();
         r.budget = in.budget();
+        pricing.check(r, r.budget);
         r.status = RequestStatus.OPEN;
         requests.save(r);
+        media.attachToRequest(client.id, r.id, in.mediaIds());
         audit.logUser(client, "REQUEST_CREATED", "REQUEST", r.id, category.code + " · " + r.budget + " MAD");
-        // artisans of this trade and city hear about it right away
+        // active artisans of this trade who work around this place hear about it right away
         for (ArtisanProfile a : artisans.findByCategoryId(category.id)) {
-            if (Cities.same(a.city, r.city)) {
+            if (a.status == ArtisanStatus.APPROVED && matches(a, r)) {
                 notifications.notify(a.user.id, "NEW_REQUEST", r.id, null, null, category.code);
             }
         }
@@ -128,7 +140,8 @@ public class RequestService {
             ArtisanProfile a = artisanOf(me);
             Offer mine = offers.findByRequestIdAndArtisanId(r.id, a.id).orElse(null);
             boolean visible = mine != null
-                    || (r.status == RequestStatus.OPEN && r.category.id.equals(a.category.id));
+                    || (r.status == RequestStatus.OPEN && a.status == ArtisanStatus.APPROVED
+                    && r.category.id.equals(a.category.id) && matches(a, r));
             if (visible) {
                 return artisanView(r, a, mine);
             }
@@ -136,25 +149,76 @@ public class RequestService {
         throw notFound();
     }
 
+    /** The client accepts the artisan's current price (not possible while the artisan has to answer a counter-offer). */
     public RequestDto accept(AuthUser me, Long requestId, Long offerId) {
         JobRequest r = ownedRequest(me, requestId);
-        if (r.status != RequestStatus.OPEN) {
-            throw new ApiException(HttpStatus.CONFLICT, "REQUEST_NOT_OPEN");
+        Offer chosen = openOffer(r, offerId);
+        if ("CLIENT".equals(chosen.lastBy)) {
+            throw new ApiException(HttpStatus.CONFLICT, "WAITING_ARTISAN");
         }
-        List<Offer> all = offers.findByRequestIdOrderByPriceAsc(r.id);
-        Offer chosen = all.stream()
-                .filter(o -> o.id.equals(offerId))
-                .findFirst()
-                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "OFFER_NOT_FOUND"));
-        for (Offer o : all) {
-            o.status = (o == chosen) ? OfferStatus.ACCEPTED : OfferStatus.REJECTED;
-            notifications.notify(o.artisan.user.id, o == chosen ? "OFFER_ACCEPTED" : "OFFER_REJECTED", r.id,
-                    r.client.fullName, r.client.fullName, null);
+        close(r, chosen, false);
+        return ownerView(r, mapper.allRatings());
+    }
+
+    /** The client proposes another price to one artisan. */
+    public RequestDto counter(AuthUser me, Long requestId, Long offerId, CounterOffer in) {
+        JobRequest r = ownedRequest(me, requestId);
+        Offer o = openOffer(r, offerId);
+        if ("CLIENT".equals(o.lastBy)) {
+            throw new ApiException(HttpStatus.CONFLICT, "WAITING_ARTISAN");
+        }
+        propose(o, in.price(), "CLIENT");
+        notifications.notify(o.artisan.user.id, "OFFER_COUNTERED", r.id, r.client.fullName, r.client.fullName,
+                String.valueOf(o.price));
+        audit.logUser(r.client, "OFFER_COUNTERED", "REQUEST", r.id, o.artisan.nameFr + " · " + o.price + " MAD");
+        return ownerView(r, mapper.allRatings());
+    }
+
+    /** Accepts an offer: the request is ACCEPTED, the other offers are declined, phones are shown to both sides. */
+    private void close(JobRequest r, Offer chosen, boolean byArtisan) {
+        for (Offer o : offers.findByRequestIdOrderByPriceAsc(r.id)) {
+            o.status = (o.id.equals(chosen.id)) ? OfferStatus.ACCEPTED : OfferStatus.REJECTED;
+            if (!o.id.equals(chosen.id)) {
+                notifications.notify(o.artisan.user.id, "OFFER_REJECTED", r.id, r.client.fullName, r.client.fullName, null);
+            } else if (!byArtisan) {
+                notifications.notify(o.artisan.user.id, "OFFER_ACCEPTED", r.id, r.client.fullName, r.client.fullName, null);
+            }
         }
         r.status = RequestStatus.ACCEPTED;
         r.acceptedOfferId = chosen.id;
-        audit.logUser(r.client, "OFFER_ACCEPTED", "REQUEST", r.id, chosen.artisan.nameFr + " · " + chosen.price + " MAD");
-        return ownerView(r, mapper.allRatings());
+        if (byArtisan) {
+            notifications.notify(r.client.id, "OFFER_AGREED", r.id, chosen.artisan.nameAr, chosen.artisan.nameFr,
+                    String.valueOf(chosen.price));
+            audit.logUser(chosen.artisan.user, "OFFER_AGREED", "REQUEST", r.id, chosen.price + " MAD");
+        } else {
+            audit.logUser(r.client, "OFFER_ACCEPTED", "REQUEST", r.id, chosen.artisan.nameFr + " · " + chosen.price + " MAD");
+        }
+    }
+
+    private Offer openOffer(JobRequest r, Long offerId) {
+        if (r.status != RequestStatus.OPEN) {
+            throw new ApiException(HttpStatus.CONFLICT, "REQUEST_NOT_OPEN");
+        }
+        Offer o = offers.findById(offerId)
+                .filter(x -> x.request.id.equals(r.id))
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "OFFER_NOT_FOUND"));
+        if (o.status != OfferStatus.PENDING) {
+            throw new ApiException(HttpStatus.CONFLICT, "OFFER_CLOSED");
+        }
+        return o;
+    }
+
+    private void propose(Offer o, int price, String by) {
+        if (o.rounds >= Mapper.MAX_ROUNDS) {
+            throw new ApiException(HttpStatus.CONFLICT, "NEGOTIATION_OVER");
+        }
+        if (price == o.price) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "SAME_PRICE");
+        }
+        pricing.check(o.request, price);
+        o.price = price;
+        o.lastBy = by;
+        o.rounds = o.rounds + 1;
     }
 
     public RequestDto cancel(AuthUser me, Long requestId) {
@@ -211,18 +275,19 @@ public class RequestService {
 
     // ------------------------------------------------------------------ artisan side
 
-    /** Open requests in the artisan's trade and city, with his own offer if he already answered. */
+    /** Open requests of the artisan's trade, around him (his radius, or his city if no position), nearest first. */
     @Transactional(readOnly = true)
     public List<RequestDto> openForArtisan(AuthUser me) {
-        ArtisanProfile a = artisanOf(me);
+        ArtisanProfile a = approvedArtisan(me);
         List<RequestDto> out = new ArrayList<>();
         for (JobRequest r : requests.findByStatusAndCategoryIdOrderByCreatedAtDesc(RequestStatus.OPEN, a.category.id)) {
-            if (!Cities.same(r.city, a.city)) {
+            if (!matches(a, r)) {
                 continue;
             }
             Offer mine = offers.findByRequestIdAndArtisanId(r.id, a.id).orElse(null);
             out.add(artisanView(r, a, mine));
         }
+        out.sort(java.util.Comparator.comparing(RequestDto::distanceKm, java.util.Comparator.nullsLast(Double::compare)));
         return out;
     }
 
@@ -238,7 +303,7 @@ public class RequestService {
     }
 
     public OfferDto offer(AuthUser me, Long requestId, CreateOffer in) {
-        ArtisanProfile a = artisanOf(me);
+        ArtisanProfile a = approvedArtisan(me);
         JobRequest r = requests.findById(requestId).orElseThrow(this::notFound);
         if (r.status != RequestStatus.OPEN) {
             throw new ApiException(HttpStatus.CONFLICT, "REQUEST_NOT_OPEN");
@@ -249,10 +314,16 @@ public class RequestService {
         if (offers.findByRequestIdAndArtisanId(r.id, a.id).isPresent()) {
             throw new ApiException(HttpStatus.CONFLICT, "OFFER_EXISTS");
         }
+        if (!matches(a, r)) {
+            throw new ApiException(HttpStatus.FORBIDDEN, "TOO_FAR");
+        }
+        pricing.check(r, in.price());
         Offer o = new Offer();
         o.request = r;
         o.artisan = a;
         o.price = in.price();
+        o.firstPrice = in.price();
+        o.lastBy = "ARTISAN";
         o.etaText = isBlank(in.etaText()) ? null : in.etaText().trim();
         o.message = isBlank(in.message()) ? null : in.message().trim();
         o.status = OfferStatus.PENDING;
@@ -262,7 +333,63 @@ public class RequestService {
         return mapper.offer(o, mapper.ratingOf(a.id), false);
     }
 
+    /** The artisan answers a client's counter-offer with another price. */
+    public RequestDto artisanCounter(AuthUser me, Long offerId, CounterOffer in) {
+        ArtisanProfile a = approvedArtisan(me);
+        Offer o = myOpenOffer(a, offerId);
+        if (!"CLIENT".equals(o.lastBy)) {
+            throw new ApiException(HttpStatus.CONFLICT, "WAITING_CLIENT");
+        }
+        propose(o, in.price(), "ARTISAN");
+        JobRequest r = o.request;
+        notifications.notify(r.client.id, "OFFER_COUNTERED", r.id, a.nameAr, a.nameFr, String.valueOf(o.price));
+        audit.logUser(a.user, "OFFER_COUNTERED", "REQUEST", r.id, o.price + " MAD");
+        return artisanView(r, a, o);
+    }
+
+    /** The artisan agrees to the client's price: the deal is done, like when the client accepts. */
+    public RequestDto artisanAgree(AuthUser me, Long offerId) {
+        ArtisanProfile a = approvedArtisan(me);
+        Offer o = myOpenOffer(a, offerId);
+        if (!"CLIENT".equals(o.lastBy)) {
+            throw new ApiException(HttpStatus.CONFLICT, "WAITING_CLIENT");
+        }
+        close(o.request, o, true);
+        return artisanView(o.request, a, o);
+    }
+
+    private Offer myOpenOffer(ArtisanProfile a, Long offerId) {
+        Offer o = offers.findById(offerId)
+                .filter(x -> x.artisan.id.equals(a.id))
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "OFFER_NOT_FOUND"));
+        return openOffer(o.request, o.id);
+    }
+
     // ------------------------------------------------------------------ helpers
+
+    /** Within the artisan's radius when both positions are known, otherwise same city. */
+    static boolean matches(ArtisanProfile a, JobRequest r) {
+        Double d = distance(a, r);
+        if (d != null) {
+            return d <= Math.max(1, a.radiusKm);
+        }
+        return Cities.same(a.city, r.city);
+    }
+
+    static Double distance(ArtisanProfile a, JobRequest r) {
+        if (a.lat == null || a.lng == null || r.lat == null || r.lng == null) {
+            return null;
+        }
+        return Geo.km(a.lat, a.lng, r.lat, r.lng);
+    }
+
+    private ArtisanProfile approvedArtisan(AuthUser me) {
+        ArtisanProfile a = artisanOf(me);
+        if (a.status != ArtisanStatus.APPROVED) {
+            throw new ApiException(HttpStatus.FORBIDDEN, "ARTISAN_NOT_APPROVED");
+        }
+        return a;
+    }
 
     private RequestDto ownerView(JobRequest r, Map<Long, Mapper.Rating> ratings) {
         List<Offer> all = offers.findByRequestIdOrderByPriceAsc(r.id);
@@ -284,7 +411,9 @@ public class RequestService {
         OfferDto myOffer = mine == null ? null : mapper.offer(mine, mapper.ratingOf(a.id), false);
         boolean accepted = mine != null && mine.status == OfferStatus.ACCEPTED;
         String clientPhone = accepted ? r.client.phone : null;
-        return mapper.request(r, offers.countByRequestId(r.id), false, List.of(), myOffer, clientPhone, accepted);
+        Double d = distance(a, r);
+        Double km = d == null ? null : Math.round(d * 2) / 2.0;      // half-km steps: no exact position leak
+        return mapper.request(r, offers.countByRequestId(r.id), false, List.of(), myOffer, clientPhone, accepted, km);
     }
 
     private Offer acceptedOffer(JobRequest r) {
