@@ -174,7 +174,8 @@ class DealsAndTrustTest {
                 .andExpect(content().string(containsString("application/ld+json")))
                 .andExpect(content().string(containsString("AggregateRating")));
         mvc.perform(get("/pro/999999")).andExpect(status().isNotFound());
-        mvc.perform(get("/artisans/paint/atlantis")).andExpect(status().isNotFound());
+        mvc.perform(get("/artisans/paint/atlantis")).andExpect(status().isOk()).andExpect(content().string(containsString("noindex")));
+        mvc.perform(get("/artisans/nothing/casablanca")).andExpect(status().isNotFound());
         mvc.perform(get("/sitemap.xml")).andExpect(status().isOk()).andExpect(content().string(containsString("/pro/" + hassanId)));
         mvc.perform(get("/robots.txt")).andExpect(content().string(containsString("Sitemap:")));
     }

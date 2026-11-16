@@ -81,8 +81,19 @@ public class SeoController {
     public ResponseEntity<String> tradeCity(@PathVariable String code, @PathVariable String city) {
         Category c = categories.findByCode(code).orElse(null);
         List<ArtisanProfile> list = c == null ? List.of() : groups().getOrDefault("/artisans/" + code + "/" + city.toLowerCase(Locale.ROOT), List.of());
-        if (c == null || list.isEmpty()) {
+        if (c == null || !city.matches("[a-zA-Z]{2,30}")) {
             return notFound();
+        }
+        if (list.isEmpty()) {
+            // a valid trade without artisans there yet: useful page for visitors, not indexed
+            String name = city.substring(0, 1).toUpperCase(Locale.ROOT) + city.substring(1).toLowerCase(Locale.ROOT);
+            String body = "<p class=crumb><a href=\"/artisans\">Artisans</a> › " + esc(c.nameFr) + "</p><h1>" + esc(c.nameFr) + " à " + esc(name)
+                    + " <span class=ar>· " + esc(c.nameAr) + "</span></h1><p class=lead>Les premiers artisans de ce métier arrivent bientôt dans votre ville. "
+                    + "Publiez votre demande : les artisans proches la recevront dès leur inscription.</p>"
+                    + "<a class=cta href=\"/app/#/new\">Publier ma demande · كتب طلبك</a>";
+            return ResponseEntity.ok().contentType(new MediaType("text", "html", java.nio.charset.StandardCharsets.UTF_8))
+                    .body(shell(c.nameFr + " à " + name + " | Brikol", "Trouvez un " + c.nameFr.toLowerCase(Locale.ROOT) + " à " + name + " sur Brikol.",
+                            base + "/artisans/" + code + "/" + city.toLowerCase(Locale.ROOT), body, null).replace("<head>", "<head><meta name=robots content=noindex>"));
         }
         Map<Long, Mapper.Rating> ratings = mapper.allRatings();
         String cityName = list.get(0).city;
