@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { api, useAsync, useSession, setAuth, setLang, guarded, toast, errMsg, isArtisan, isAdmin, artisanReady, t } from '../session';
 import { Avatar, Screen, PageHead, Icon } from '../ui';
+import { dropPush, enableWebPush, webPushSupported, webPushState } from '../push';
+import { useConfig } from '../session';
 
 function AvailToggle() {
   const me = useAsync(() => api('/artisan/me'), []);
@@ -29,6 +31,8 @@ const ArtisanCta = ({ onClick }) => (
 
 export default function Me() {
   const { token, user, lang } = useSession();
+  const cfg = useConfig();
+  const [pushOn, setPushOn] = useState(() => webPushState() === 'granted');
   const langSeg = (
     <div className="col g10"><span className="h3">{t('langT')}</span>
       <div className="seg">
@@ -49,7 +53,7 @@ export default function Me() {
       </Screen>
     );
   }
-  const logout = () => { setAuth(null, null); toast(t('logout')); location.hash = '#/'; };
+  const logout = async () => { await dropPush(); setAuth(null, null); toast(t('logout')); location.hash = '#/'; };
   return (
     <Screen tab="me" width="narrow">
       <PageHead title={t('meTitle')} />
@@ -66,6 +70,12 @@ export default function Me() {
         <a className={`btn block ${artisanReady() ? 'ghost' : ''}`} href="#/onboarding"><Icon name="doc" size={18} />{t('openFile')}{artisanReady() ? '' : ' · ' + t('ob_' + (user.artisanStatus || 'DRAFT')).split('.')[0]}</a>
       ) : null}
       {artisanReady() ? <AvailToggle /> : null}
+      {artisanReady() && cfg.monetization ? <a className="btn ghost block" href="#/plan"><Icon name="crown" size={18} />{t('planTitle')}</a> : null}
+      {webPushSupported(cfg) && !pushOn ? (
+        <button className="btn ghost block" onClick={() => guarded(async () => { const ok = await enableWebPush(cfg, true); setPushOn(ok); toast(ok ? t('pushOn') : t('pushDenied')); })}>
+          <Icon name="bell" size={18} />{t('pushEnable')}
+        </button>
+      ) : null}
       {langSeg}
       <button className="btn ghost block" onClick={() => guarded(logout)}>{t('logout')}</button>
       {isArtisan() || isAdmin() ? null : <ArtisanCta onClick={() => setAuth(null, null)} />}

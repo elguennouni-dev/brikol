@@ -47,7 +47,7 @@ export function ArtisanCard({ a }) {
     <a className="acard" href={`#/artisan/${a.id}`}>
       <Avatar name={L(a, 'name')} id={a.id} />
       <div className="body">
-        <div className="row g6" style={{ minWidth: 0 }}><span className="name">{L(a, 'name')}</span>{a.verified ? <Verified /> : null}</div>
+        <div className="row g6" style={{ minWidth: 0 }}><span className="name">{L(a, 'name')}</span>{a.verified ? <Verified /> : null}{a.featured ? <span className="pill featured"><Icon name="crown" size={11} />{t('featured')}</span> : null}</div>
         <div className="row g4 muted small" style={{ minWidth: 0 }}>
           <span style={{ whiteSpace: 'nowrap' }}>{L(a, 'trade')}</span><span>·</span><Icon name="pin" size={13} /><span className="ell">{L(a, 'neighborhood')}</span>
         </div>
@@ -152,8 +152,8 @@ export function Nav({ active }) {
 }
 
 // ------------------------------------------------------------ notifications UI
-const NOTIF_ICON = { NEW_REQUEST: 'clip', OFFER_RECEIVED: 'cash', OFFER_ACCEPTED: 'phone', OFFER_REJECTED: 'user', REQUEST_CANCELLED: 'minus', JOB_DONE: 'checkMark', REVIEW_RECEIVED: 'star', ANNOUNCEMENT: 'bell', ADMIN_CANCELLED: 'minus', OFFER_COUNTERED: 'cash', OFFER_AGREED: 'phone', ARTISAN_APPROVED: 'checkMark', ARTISAN_REJECTED: 'doc', ARTISAN_SUBMITTED: 'doc' };
-const NOTIF_TONE = { NEW_REQUEST: 'lime', OFFER_RECEIVED: 'lime', OFFER_ACCEPTED: 'ok', OFFER_REJECTED: 'mute', REQUEST_CANCELLED: 'warn', JOB_DONE: 'ok', REVIEW_RECEIVED: 'warn', ANNOUNCEMENT: 'lime', ADMIN_CANCELLED: 'warn', OFFER_COUNTERED: 'lime', OFFER_AGREED: 'ok', ARTISAN_APPROVED: 'ok', ARTISAN_REJECTED: 'warn', ARTISAN_SUBMITTED: 'lime' };
+const NOTIF_ICON = { NEW_REQUEST: 'clip', OFFER_RECEIVED: 'cash', OFFER_ACCEPTED: 'phone', OFFER_REJECTED: 'user', REQUEST_CANCELLED: 'minus', JOB_DONE: 'checkMark', REVIEW_RECEIVED: 'star', ANNOUNCEMENT: 'bell', ADMIN_CANCELLED: 'minus', OFFER_COUNTERED: 'cash', OFFER_AGREED: 'phone', ARTISAN_APPROVED: 'checkMark', ARTISAN_REJECTED: 'doc', ARTISAN_SUBMITTED: 'doc', APPOINTMENT_PROPOSED: 'clock', APPOINTMENT_CONFIRMED: 'clock', APPOINTMENT_REMINDER: 'clock', CLIENT_REVIEWED: 'star', SUBSCRIPTION_EXTENDED: 'crown', SUBSCRIPTION_ENDING: 'crown', REPORT_CREATED: 'flag', REPORT_HANDLED: 'flag' };
+const NOTIF_TONE = { NEW_REQUEST: 'lime', OFFER_RECEIVED: 'lime', OFFER_ACCEPTED: 'ok', OFFER_REJECTED: 'mute', REQUEST_CANCELLED: 'warn', JOB_DONE: 'ok', REVIEW_RECEIVED: 'warn', ANNOUNCEMENT: 'lime', ADMIN_CANCELLED: 'warn', OFFER_COUNTERED: 'lime', OFFER_AGREED: 'ok', ARTISAN_APPROVED: 'ok', ARTISAN_REJECTED: 'warn', ARTISAN_SUBMITTED: 'lime', APPOINTMENT_PROPOSED: 'lime', APPOINTMENT_CONFIRMED: 'ok', APPOINTMENT_REMINDER: 'warn', CLIENT_REVIEWED: 'warn', SUBSCRIPTION_EXTENDED: 'ok', SUBSCRIPTION_ENDING: 'warn', REPORT_CREATED: 'warn', REPORT_HANDLED: 'ok' };
 
 export function NotifItem({ n, onClick }) {
   return (

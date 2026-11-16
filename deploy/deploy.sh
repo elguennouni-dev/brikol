@@ -2,7 +2,7 @@
 # Run on the server, from this folder:  bash deploy.sh
 set -euo pipefail
 cd "$(dirname "$0")"
-mkdir -p downloads uploads
+mkdir -p downloads uploads secrets
 # The secrets must never change once the database exists (MySQL keeps the password it was created with).
 # A copy of .env is kept outside the project folder, so a fresh clone / unzip / git reset cannot lose it.
 SAFE_DIR="${SANAI3I_SECRETS:-$HOME/.sanai3i}"
@@ -37,6 +37,8 @@ gen() { head -c 48 /dev/urandom | base64 | tr -dc 'A-Za-z0-9' | head -c "$1"; }
 if ! grep -q '^ADMIN_PASSWORD=' .env; then
   printf '\nADMIN_PHONE=0600000099\nADMIN_NAME=Administrateur\nADMIN_PASSWORD=%s\n' "$(gen 14)" >> .env
 fi
+# Firebase service account for push: put it at deploy/secrets/fcm.json
+if [ -f secrets/fcm.json ] && ! grep -q '^FCM_CREDENTIALS=' .env ; then echo 'FCM_CREDENTIALS=/data/secrets/fcm.json' >> .env; fi
 mkdir -p "$SAFE_DIR" && chmod 700 "$SAFE_DIR" && cp .env "$SAFE" && chmod 600 "$SAFE"
 docker compose -f docker-compose.prod.yml --env-file .env up -d --build
 echo

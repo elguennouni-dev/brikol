@@ -18,3 +18,4 @@ mobile/ios/build/
 .DS_Store
 backend/uploads/
 deploy/uploads/
+deploy/secrets/

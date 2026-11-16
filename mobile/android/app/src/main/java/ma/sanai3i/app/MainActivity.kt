@@ -11,6 +11,10 @@ import android.os.Bundle
 import android.view.Gravity
 import android.view.View
 import android.webkit.GeolocationPermissions
+import android.webkit.JavascriptInterface
+import android.os.Build
+import com.google.firebase.FirebaseApp
+import com.google.firebase.messaging.FirebaseMessaging
 import android.webkit.PermissionRequest
 import android.webkit.ValueCallback
 import android.provider.MediaStore
@@ -76,6 +80,53 @@ class MainActivity : ComponentActivity() {
             if (granted) req.grant(arrayOf(PermissionRequest.RESOURCE_AUDIO_CAPTURE)) else req.deny()
         }
 
+    private val notificationPermission =
+        registerForActivityResult(ActivityResultContracts.RequestPermission()) { /* nothing to do */ }
+
+    /** Exposed to the web app as window.BrikolApp: the push token for this device. */
+    inner class Bridge {
+        @JavascriptInterface
+        fun pushToken(): String = PushService.token(this@MainActivity)
+    }
+
+    private fun setupPush() {
+        val ready = try { FirebaseApp.getApps(this).isNotEmpty() || FirebaseApp.initializeApp(this) != null } catch (e: Exception) { false }
+        if (!ready) return                              // no google-services.json in this build
+        PushService.ensureChannel(this)
+        PushService.tokenListener = { tok -> runOnUiThread { sendTokenToPage(tok) } }
+        try {
+            FirebaseMessaging.getInstance().token.addOnSuccessListener { tok ->
+                PushService.saveToken(this, tok)
+                sendTokenToPage(tok)
+            }
+        } catch (e: Exception) {
+            return
+        }
+        if (Build.VERSION.SDK_INT >= 33 &&
+            ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+            notificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
+        }
+    }
+
+    private fun sendTokenToPage(tok: String) {
+        if (::webView.isInitialized) {
+            val safe = tok.replace("\\", "").replace("'", "")
+            webView.evaluateJavascript("window.onBrikolPushToken && window.onBrikolPushToken('$safe')", null)
+        }
+    }
+
+    /** A tapped notification opens its page inside the app. */
+    private fun openLink(intent: Intent?) {
+        val link = intent?.getStringExtra("link") ?: return
+        if (!link.startsWith("/")) return
+        webView.loadUrl(baseUri.scheme + "://" + baseUri.authority + link)
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        openLink(intent)
+    }
+
     private val locationPermission =
         registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { result ->
             geoCallback?.invoke(geoOrigin, result.values.any { it }, false)
@@ -99,6 +150,7 @@ class MainActivity : ComponentActivity() {
             settings.setGeolocationEnabled(true)
             // lets the web app know it runs in the app (e.g. hide "Sign in with Google", blocked in WebViews)
             settings.userAgentString = settings.userAgentString + " Sanai3iApp/Android"
+            addJavascriptInterface(Bridge(), "BrikolApp")
             webViewClient = ShellClient()
             webChromeClient = object : WebChromeClient() {
                 override fun onShowFileChooser(view: WebView, callback: ValueCallback<Array<Uri>>,
@@ -188,9 +240,12 @@ class MainActivity : ComponentActivity() {
 
         if (savedInstanceState != null) {
             webView.restoreState(savedInstanceState)
+        } else if (intent?.getStringExtra("link") != null) {
+            openLink(intent)
         } else {
             webView.loadUrl(BuildConfig.BASE_URL)
         }
+        setupPush()
     }
 
     override fun onSaveInstanceState(outState: Bundle) {

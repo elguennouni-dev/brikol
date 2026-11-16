@@ -56,6 +56,42 @@ Password `demo1234`
 
 Errors are codes (e.g. `PHONE_TAKEN`) translated by the web app.
 
+## SMS codes and forgotten password (Twilio)
+Off until configured: sign-up then works without code and "forgot password" says it is unavailable.
+To turn on, in `deploy/.env`: `SMS_PROVIDER=twilio`, `TWILIO_ACCOUNT_SID=AC...`, `TWILIO_AUTH_TOKEN=...`,
+`TWILIO_FROM=+1...` (a Twilio number) or `MG...` (Messaging Service), then `bash deploy/update.sh`.
+Codes: 6 digits, 10 minutes, 5 tries, 1 per minute and 5 per hour per number. New accounts (password or Google) need the code;
+`POST /api/auth/otp {phone, purpose: REGISTER|RESET}`, `POST /api/auth/reset {phone, otp, password}`.
+
+## Rate limits
+Per IP: login 20 / 10 min, sign-up 15 / h, SMS 6 / h, reset 10 / h, uploads 60 / 10 min, reports 15 / h, chat 40 / min (`429 RATE_LIMITED`).
+Per number: 8 wrong passwords in 15 min lock the login (`TOO_MANY_ATTEMPTS`). Off in the `dev` profile (`RATE_LIMIT=false`).
+
+## Push notifications (Firebase)
+Every notification is also sent as a push (Android app, browsers, iPhone PWA 16.4+) when Firebase is configured:
+1. console.firebase.google.com: create a project. Project settings > Service accounts > Generate new private key: save it on
+   the server as `deploy/secrets/fcm.json` (deploy.sh adds `FCM_CREDENTIALS`).
+2. Project settings > General > Add app > Web: copy `apiKey`, `appId`, `projectId`, `messagingSenderId` into `deploy/.env` as
+   `FIREBASE_API_KEY`, `FIREBASE_APP_ID`, `FIREBASE_PROJECT_ID`, `FIREBASE_SENDER_ID`. Cloud Messaging > Web Push certificates >
+   Generate key pair: `FIREBASE_VAPID_KEY`.
+3. Add app > Android, package `ma.sanai3i.app`: download `google-services.json` into `mobile/android/app/` (or the GitHub secret
+   `GOOGLE_SERVICES_JSON`, base64) and rebuild the APK. Without it the app works, push is just off.
+Users enable it on the web from Account > "Activer les notifications"; the Android app asks at start.
+
+## Chat, appointment, reviews both ways, reports
+After acceptance: chat (`/app/#/chat/{id}`, live over SSE, push when away), appointment proposed by one side and confirmed by
+the other, reminder one hour before. After the job the artisan rates the client; artisans see the client's rating on new requests.
+"Signaler" on artisans, offers, requests and chat messages; Admin > Signalements to resolve or dismiss.
+
+## Subscription (revenue)
+Off by default. Admin > Outils > Revenus: turn on, monthly price, free days, "featured" price, how to pay (CashPlus, RIB...).
+Artisans pay outside the app; the admin records the payment on the user page, which extends the subscription (or featured).
+Without an active subscription an artisan can see requests but not send offers. Featured artisans are listed first.
+
+## Pages for Google
+`/artisans` (index), `/artisans/{trade}/{city}` (e.g. `/artisans/paint/casablanca`), `/pro/{id}/{slug}` (artisan profile with
+schema.org data), `/sitemap.xml`, `/robots.txt`. Submit the sitemap in Google Search Console.
+
 ## Requests: photos, video, voice notes
 `POST /api/uploads` (multipart: `file`, `purpose`). Clients attach up to 6 files to a request (`mediaIds`): photos (resized to
 1600 px in the browser, JPEG/PNG/WebP, 10 MB), video (MP4/MOV/WebM/3GP, 60 MB), voice notes recorded in the app (WebM/MP4 audio, 15 MB).

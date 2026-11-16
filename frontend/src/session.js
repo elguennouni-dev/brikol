@@ -176,6 +176,7 @@ export const useNotifs = () => useSyncExternalStore(nsub, () => nstate);
 
 export function notifText(n) {
   const name = snap.lang === 'ar' ? (n.actorAr || n.actorFr || '') : (n.actorFr || n.actorAr || '');
+  if (n.kind && n.kind.startsWith('APPOINTMENT_') && n.detail) n = { ...n, detail: new Date(n.detail).toLocaleString(snap.lang === 'ar' ? 'ar-MA-u-nu-latn' : 'fr-FR', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) };
   const v = (n.kind === 'OFFER_RECEIVED' || n.kind === 'OFFER_COUNTERED' || n.kind === 'OFFER_AGREED') ? money(n.detail) : (n.detail || (n.requestId ? '#' + n.requestId : ''));
   return t('n_' + n.kind, { name, v, cat: catName(n.detail) });
 }
@@ -183,6 +184,9 @@ export function notifHref(n) {
   if (n.kind === 'ANNOUNCEMENT') return '#/notifications';
   if (n.kind === 'ARTISAN_APPROVED' || n.kind === 'ARTISAN_REJECTED') return '#/onboarding';
   if (n.kind === 'ARTISAN_SUBMITTED') return '#/admin/files';
+  if (n.kind === 'REPORT_CREATED') return '#/admin/reports';
+  if (n.kind && n.kind.startsWith('APPOINTMENT_') && n.requestId) return '#/chat/' + n.requestId;
+  if (n.kind && n.kind.startsWith('SUBSCRIPTION_')) return '#/plan';
   if (n.kind === 'NEW_REQUEST') return '#/jobs';
   return isArtisan() ? '#/jobs?tab=mine' : '#/requests';
 }
@@ -221,8 +225,11 @@ function parseEvent(block) {
     if (line.startsWith('event:')) name = line.slice(6).trim();
     else if (line.startsWith('data:')) data.push(line.slice(5).trim());
   });
-  if (name !== 'notification' || !data.length) return;
-  try { onLive(JSON.parse(data.join('\n'))); } catch (e) { /* ignore malformed event */ }
+  if (!data.length) return;
+  try {
+    if (name === 'notification') onLive(JSON.parse(data.join('\n')));
+    else if (name === 'message') onChat(JSON.parse(data.join('\n')));
+  } catch (e) { /* ignore malformed event */ }
 }
 
 async function liveLoop(ctrl, token) {
@@ -252,6 +259,19 @@ async function liveLoop(ctrl, token) {
     nset({ live: false });
     await sleep(delay);
     delay = Math.min(delay * 2, 15000);
+  }
+}
+
+// ------------------------------------------------------------ chat messages pushed live
+const chatListeners = new Set();
+export const onChatMessage = (f) => { chatListeners.add(f); return () => chatListeners.delete(f); };
+let openChat = null;                       // request id of the chat on screen (no toast for it)
+export const setOpenChat = (id) => { openChat = id; };
+function onChat(m) {
+  chatListeners.forEach((f) => f(m));
+  if (String(openChat) !== String(m.requestId)) {
+    toast(m.senderName + ' : ' + (m.body.length > 60 ? m.body.slice(0, 60) + '…' : m.body));
+    nset({ tick: nstate.tick + 1 });       // lists with unread counters reload
   }
 }
 

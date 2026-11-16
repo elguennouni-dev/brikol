@@ -4,7 +4,7 @@ import { RequestPlace, MapPreview } from '../places';
 import { MediaGallery, PrivateImg, Lightbox } from '../media';
 import { Screen, Icon, Gate, Skeleton, Empty, BackButton } from '../ui';
 
-const SECTIONS = [['', 'a_dash'], ['files', 'a_files'], ['users', 'a_users'], ['requests', 'a_requests'], ['reviews', 'a_reviews'], ['categories', 'a_cats'], ['audit', 'a_audit'], ['tools', 'a_tools']];
+const SECTIONS = [['', 'a_dash'], ['files', 'a_files'], ['reports', 'a_reports'], ['users', 'a_users'], ['requests', 'a_requests'], ['reviews', 'a_reviews'], ['categories', 'a_cats'], ['audit', 'a_audit'], ['tools', 'a_tools']];
 const STATUS_PILL = { OPEN: 'pill-lime', ACCEPTED: 'pill-warn', DONE: 'pill-ok', CANCELLED: 'pill-mute' };
 const statusLabel = (s) => t('a_status' + s.charAt(0) + s.slice(1).toLowerCase());
 const qs = (o) => Object.entries(o).filter(([, v]) => v !== '' && v != null).map(([k, v]) => k + '=' + encodeURIComponent(v)).join('&');
@@ -65,6 +65,9 @@ function Dashboard() {
   return (
     <Gate st={st} loader={<Skeleton rows={5} />}>{(s) => (
       <>
+        {s.openReports ? (
+          <a className="note wait" href="#/admin/reports" style={{ textDecoration: 'none' }}><Icon name="flag" size={18} /><span className="grow">{t('a_openReports')}</span><b className="num">{s.openReports} ›</b></a>
+        ) : null}
         {s.pendingArtisans ? (
           <a className="note wait" href="#/admin/files" style={{ textDecoration: 'none' }}><Icon name="doc" size={18} /><span className="grow">{t('a_pendingFiles')}</span><b className="num">{s.pendingArtisans} ›</b></a>
         ) : null}
@@ -200,6 +203,7 @@ function UserDetail({ id }) {
             </div>
           )}
 
+          {u.artisanId ? <ArtisanPlan artisanId={u.artisanId} /> : null}
           {d.recentRequests.length ? (
             <div className="card col g8">
               <b>{t('a_recentReq')}</b>
@@ -426,6 +430,124 @@ async function download(path, name) {
   setTimeout(() => URL.revokeObjectURL(url), 2000);
 }
 
+// ------------------------------------------------------------ reports
+function Reports() {
+  const [status, setStatus] = useState('OPEN');
+  const st = useAsync(() => api('/admin/reports?status=' + status), [status]);
+  const [notes, setNotes] = useState({});
+  const handle = (r, s) => guarded(async () => { await api('/admin/reports/' + r.id, { method: 'POST', body: { status: s, resolution: notes[r.id] || null } }); toast(t('a_done')); st.reload(); });
+  return (
+    <>
+      <div className="row g6 wrap">{['OPEN', 'RESOLVED', 'DISMISSED'].map((s) => <button key={s} className={`chip ${status === s ? 'on' : ''}`} onClick={() => setStatus(s)}>{t('rs_' + s)}</button>)}</div>
+      <Gate st={st} loader={<Skeleton rows={4} />}>{(list) => (list.length ? (
+        <div className="col g10">
+          {list.map((r) => (
+            <div key={r.id} className="card col g8">
+              <div className="row between g8 wrap">
+                <b>{t('rr_' + r.reason)}</b>
+                <span className="muted xs">{when(r.createdAt)}</span>
+              </div>
+              <span className="small">
+                {t('a_target')}: <a className="link" href={`#/admin/user/${r.targetUserId}`}>{r.targetName}</a> <span className="muted" dir="ltr">({r.targetPhone})</span>
+                {r.reportsAgainstTarget > 1 ? <span className="pill pill-warn" style={{ marginInlineStart: 6 }}>{t('a_reportsN', { n: r.reportsAgainstTarget })}</span> : null}
+              </span>
+              <span className="muted xs">{t('a_reporter')}: {r.reporterName} <span dir="ltr">({r.reporterPhone})</span> · {r.targetType} #{r.targetId}</span>
+              {r.details ? <p className="small" style={{ margin: 0 }} dir="auto">{r.details}</p> : null}
+              {r.status === 'OPEN' ? (
+                <>
+                  <input className="inp" maxLength={500} value={notes[r.id] || ''} onChange={(e) => setNotes({ ...notes, [r.id]: e.target.value })} placeholder={t('a_resolution')} />
+                  <div className="row g8 wrap">
+                    <button className="btn sm" onClick={() => handle(r, 'RESOLVED')}>{t('a_resolve')}</button>
+                    <button className="btn sm ghost" onClick={() => handle(r, 'DISMISSED')}>{t('a_dismiss')}</button>
+                    <a className="btn sm ghost" href={`#/admin/user/${r.targetUserId}`}>{t('a_users')}</a>
+                  </div>
+                </>
+              ) : (r.resolution ? <span className="muted xs">{r.resolution}</span> : null)}
+            </div>
+          ))}
+        </div>
+      ) : <Empty>{t('a_noResults')}</Empty>)}</Gate>
+    </>
+  );
+}
+
+// ------------------------------------------------------------ paid plans
+function ArtisanPlan({ artisanId }) {
+  const st = useAsync(() => api('/admin/artisans/' + artisanId + '/plan'), [artisanId]);
+  const [f, setF] = useState({ kind: 'SUBSCRIPTION', months: 1, amount: '', method: 'CASHPLUS', note: '' });
+  const save = (e) => {
+    e.preventDefault();
+    guarded(async () => {
+      await api('/admin/artisans/' + artisanId + '/payments', { method: 'POST', body: { ...f, months: Number(f.months) || 1, amount: Number(f.amount) || 0 } });
+      toast(t('a_done'));
+      setF({ ...f, amount: '', note: '' });
+      st.reload();
+    });
+  };
+  return (
+    <Gate st={st} loader={<Skeleton rows={1} />}>{(p) => (
+      <div className="card col g10">
+        <b className="row g6"><Icon name="crown" size={16} />{t('planTitle')}</b>
+        <div className="kvs">
+          <Field k={t('a_subscription')} v={p.monetization ? (p.active ? t('planActive') : t('planExpired')) : t('planFree')} />
+          {p.subscriptionUntil ? <Field k={t('a_until')} v={when(p.subscriptionUntil)} /> : null}
+          <Field k={t('featured')} v={p.featured ? when(p.featuredUntil) : '–'} />
+        </div>
+        <form className="row g8 wrap" onSubmit={save}>
+          <select className="inp" value={f.kind} onChange={(e) => setF({ ...f, kind: e.target.value })}>
+            <option value="SUBSCRIPTION">{t('pk_SUBSCRIPTION')}</option><option value="FEATURED">{t('pk_FEATURED')}</option>
+          </select>
+          <select className="inp" value={f.months} onChange={(e) => setF({ ...f, months: e.target.value })}>
+            {[1, 2, 3, 6, 12].map((m) => <option key={m} value={m}>{m} {t('months')}</option>)}
+          </select>
+          <input className="inp" inputMode="numeric" value={f.amount} onChange={(e) => setF({ ...f, amount: e.target.value.replace(/[^\d]/g, '') })} placeholder={t('a_amount')} required />
+          <select className="inp" value={f.method} onChange={(e) => setF({ ...f, method: e.target.value })}>
+            {['CASHPLUS', 'VIREMENT', 'WAFACASH', 'CASH', 'OTHER'].map((m) => <option key={m} value={m}>{m}</option>)}
+          </select>
+          <input className="inp" maxLength={300} value={f.note} onChange={(e) => setF({ ...f, note: e.target.value })} placeholder={t('a_note')} />
+          <button className="btn sm" type="submit">{t('a_recordPayment')}</button>
+        </form>
+        {p.payments.length ? p.payments.map((x) => <div key={x.id} className="row between g8 line small"><span>{t('pk_' + x.kind)} · {x.months} {t('months')} · {x.method}</span><span className="num">{fmt(x.amount)} {t('dh')} · {when(x.createdAt)}</span></div>) : null}
+      </div>
+    )}</Gate>
+  );
+}
+
+function Monetization() {
+  const st = useAsync(() => api('/admin/monetization'), []);
+  const pays = useAsync(() => api('/admin/payments'), []);
+  const [m, setM] = useState(null);
+  const v = m || st.data;
+  if (!v) return null;
+  const save = (e) => {
+    e.preventDefault();
+    guarded(async () => {
+      await api('/admin/monetization', { method: 'PUT', body: { ...v, subscriptionPrice: Number(v.subscriptionPrice) || 0, trialDays: Number(v.trialDays) || 0, featuredPrice: Number(v.featuredPrice) || 0 } });
+      toast(t('a_done')); setM(null); st.reload();
+    });
+  };
+  const num = (k) => <input className="inp" inputMode="numeric" value={v[k]} onChange={(e) => setM({ ...v, [k]: e.target.value.replace(/[^\d]/g, '') })} />;
+  return (
+    <form className="card col g12" onSubmit={save}>
+      <b className="row g6"><Icon name="crown" size={16} />{t('a_monetization')}</b>
+      <label className="row between g12"><span>{t('a_monetizationOn')}</span><input type="checkbox" checked={v.enabled} onChange={(e) => setM({ ...v, enabled: e.target.checked })} style={{ width: 22, height: 22, accentColor: '#0E2B22' }} /></label>
+      <div className="grid2c">
+        <label className="col g6"><span className="muted small">{t('a_subPrice')}</span>{num('subscriptionPrice')}</label>
+        <label className="col g6"><span className="muted small">{t('a_trialDays')}</span>{num('trialDays')}</label>
+        <label className="col g6"><span className="muted small">{t('a_featuredPrice')}</span>{num('featuredPrice')}</label>
+      </div>
+      <label className="col g6"><span className="muted small">{t('a_payInstructions')}</span>
+        <textarea className="inp" rows={3} maxLength={450} value={v.paymentInstructions || ''} onChange={(e) => setM({ ...v, paymentInstructions: e.target.value })} /></label>
+      <button className="btn sm" type="submit" style={{ alignSelf: 'flex-start' }}>{t('a_save')}</button>
+      {pays.data && pays.data.length ? (
+        <div className="col g6"><b className="small">{t('planPayments')}</b>
+          {pays.data.slice(0, 20).map((x) => <div key={x.id} className="row between g8 line small"><a className="link" href={`#/admin/file/${x.artisanId}`}>{x.artisanName}</a><span className="num">{t('pk_' + x.kind)} · {fmt(x.amount)} {t('dh')} · {when(x.createdAt)}</span></div>)}
+        </div>
+      ) : null}
+    </form>
+  );
+}
+
 function Tools() {
   const settings = useAsync(() => api('/admin/settings'), []);
   const sys = useAsync(() => api('/admin/system'), []);
@@ -436,6 +558,7 @@ function Tools() {
   const hms = (sec) => `${Math.floor(sec / 86400)}d ${Math.floor((sec % 86400) / 3600)}h ${Math.floor((sec % 3600) / 60)}m`;
   return (
     <>
+      <Monetization />
       <form className="card col g12" onSubmit={(e) => { e.preventDefault(); guarded(async () => { const r = await api('/admin/broadcast', { method: 'POST', body: { audience: aud, message: msg } }); toast(t('a_sent', { n: r.sent })); setMsg(''); }); }}>
         <b>{t('a_broadcast')}</b>
         <select className="inp" value={aud} onChange={(e) => setAud(e.target.value)} aria-label={t('a_audience')}>
@@ -587,6 +710,7 @@ export default function Admin({ route }) {
   let body;
   if (!isAdmin()) body = <Empty>{t('a_forbidden')}</Empty>;
   else if (sec === 'files') body = <Files />;
+  else if (sec === 'reports') body = <Reports />;
   else if (sec === 'file') body = <FileDetail id={route.sub} />;
   else if (sec === 'users') body = <Users />;
   else if (sec === 'user') body = <UserDetail id={route.sub} />;

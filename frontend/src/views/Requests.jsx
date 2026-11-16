@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { RequestPlace } from '../places';
 import { MediaGallery } from '../media';
 import { CounterForm } from '../price';
+import { ReportButton } from '../report';
+import { Appointment } from './Chat';
 import { fmt } from '../session';
 import { api, useAsync, guarded, toast, t, L, money, ago, etaLabel } from '../session';
 import { Icon, Avatar, SegLinks, Screen, Gate, Empty, Skeleton, PageHead, catColors } from '../ui';
@@ -80,6 +82,7 @@ function RequestCard({ r, reload, goDone }) {
                     {o.artisanReviewCount > 0 ? <><Icon name="star" size={12} className="star" />{Number(o.artisanRating).toFixed(1)} · </> : null}{etaLabel(o.etaText)}
                   </span>
                   {o.message ? <span className="muted xs">{o.message}</span> : null}
+                  <ReportButton targetType="ARTISAN" targetId={o.artisanId} className="link muted xs" />
                 </div>
                 <div className="col" style={{ alignItems: 'flex-end', gap: 5 }}>
                   {o.firstPrice && o.firstPrice !== o.price && o.lastBy !== 'CLIENT' ? <span className="strike xs num">{fmt(o.firstPrice)}</span> : null}
@@ -103,7 +106,11 @@ function RequestCard({ r, reload, goDone }) {
     body = (
       <>
         <div className="note ok"><Icon name="phone" size={18} /><span>{t('accepted')}{o0 ? ' · ' + L(o0, 'artisanName') + ' · ' + money(o0.price) : ''}</span></div>
-        {o0 && o0.artisanPhone ? <a className="btn" href={`tel:${o0.artisanPhone}`}><Icon name="phone" size={18} />{t('callArtisan')}</a> : null}
+        <div className="row g8">
+          <a className="btn" style={{ flex: 1 }} href={`#/chat/${r.id}`}><Icon name="chatb" size={18} />{t('chat')}{r.unreadMessages ? <span className="cbadge">{r.unreadMessages}</span> : null}</a>
+          {o0 && o0.artisanPhone ? <a className="btn ghost" style={{ flex: 1 }} href={`tel:${o0.artisanPhone}`}><Icon name="phone" size={18} />{t('call')}</a> : null}
+        </div>
+        <Appointment requestId={r.id} at={r.appointmentAt} by={r.appointmentBy} confirmed={r.appointmentConfirmed} myRole="CLIENT" status={r.status} onChange={reload} />
         <div className="row between g10">
           <button className="btn sm dark" onClick={complete}>{sure('complete', t('markDone'))}</button>
           <button className="link danger" onClick={cancel}>{sure('cancel', t('cancelReq'))}</button>
@@ -111,7 +118,15 @@ function RequestCard({ r, reload, goDone }) {
       </>
     );
   } else if (r.status === 'DONE') {
-    body = r.reviewed ? <div className="note ok">{t('reviewedMsg')}</div> : <ReviewForm r={r} onDone={reload} />;
+    body = (
+      <>
+        {r.reviewed ? <div className="note ok">{t('reviewedMsg')}</div> : <ReviewForm r={r} onDone={reload} />}
+        <div className="row g12 wrap">
+          <a className="link" href={`#/chat/${r.id}`}>{t('chat')}</a>
+          {o0 ? <ReportButton targetType="ARTISAN" targetId={o0.artisanId} /> : null}
+        </div>
+      </>
+    );
   }
 
   return (

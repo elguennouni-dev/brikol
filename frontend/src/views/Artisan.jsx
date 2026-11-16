@@ -1,5 +1,6 @@
 import { api, useAsync, t, L, fmt, initials, ago, back } from '../session';
 import { IC, Icon, Verified, Screen, Gate, BackButton, PAL } from '../ui';
+import { ReportButton } from '../report';
 
 export default function Artisan({ route }) {
   const st = useAsync(() => api('/artisans/' + encodeURIComponent(route.id)), [route.id]);
@@ -39,7 +40,7 @@ export default function Artisan({ route }) {
                 <span className={`pill ${a.availableToday ? 'pill-ok' : 'pill-mute'}`} style={{ marginBottom: 6, padding: '5px 12px', fontSize: 12.5 }}>{t(a.availableToday ? 'availToday' : 'availTomorrow')}</span>
               </div>
               <div className="col g4">
-                <div className="row g8" style={{ fontSize: 23, fontWeight: 800 }}>{L(a, 'name')}{a.verified ? <Verified size={22} /> : null}</div>
+                <div className="row g8" style={{ fontSize: 23, fontWeight: 800 }}>{L(a, 'name')}{a.verified ? <Verified size={22} /> : null}{a.featured ? <span className="pill featured"><Icon name="crown" size={12} />{t('featured')}</span> : null}</div>
                 <div className="row g6 muted" style={{ fontSize: 14 }}><span>{L(a, 'trade')}</span><span>·</span><Icon name="pin" size={14} /><span>{L(a, 'neighborhood')}</span></div>
               </div>
               <div className="stats">
@@ -73,6 +74,7 @@ export default function Artisan({ route }) {
           </div>
         )}
       </Gate>
+          {a ? <div style={{ textAlign: 'center' }}><ReportButton targetType="ARTISAN" targetId={a.id} label={t('reportArtisan')} /></div> : null}
     </Screen>
   );
 }

@@ -36,11 +36,25 @@ services:
       ADMIN_PHONE: ${ADMIN_PHONE:-}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
       ADMIN_NAME: ${ADMIN_NAME:-Administrateur}
+      PUBLIC_URL: ${PUBLIC_URL:-https://snai3i.elguennouni.site}
+      # SMS codes (Twilio). Leave SMS_PROVIDER empty to keep them off.
+      SMS_PROVIDER: ${SMS_PROVIDER:-none}
+      TWILIO_ACCOUNT_SID: ${TWILIO_ACCOUNT_SID:-}
+      TWILIO_AUTH_TOKEN: ${TWILIO_AUTH_TOKEN:-}
+      TWILIO_FROM: ${TWILIO_FROM:-}
+      # Push (Firebase): service account file in deploy/secrets/fcm.json + web app config
+      FCM_CREDENTIALS: ${FCM_CREDENTIALS:-}
+      FIREBASE_API_KEY: ${FIREBASE_API_KEY:-}
+      FIREBASE_APP_ID: ${FIREBASE_APP_ID:-}
+      FIREBASE_PROJECT_ID: ${FIREBASE_PROJECT_ID:-}
+      FIREBASE_SENDER_ID: ${FIREBASE_SENDER_ID:-}
+      FIREBASE_VAPID_KEY: ${FIREBASE_VAPID_KEY:-}
       DOWNLOADS_DIR: /data/downloads
       UPLOADS_DIR: /data/uploads
     volumes:
       - ./downloads:/data/downloads:ro
       - ./uploads:/data/uploads
+      - ./secrets:/data/secrets:ro
 
 volumes:
   dbdata:

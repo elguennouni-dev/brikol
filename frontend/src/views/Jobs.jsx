@@ -3,6 +3,8 @@ import { RequestPlace } from '../places';
 import { MediaGallery } from '../media';
 import { PriceField, CounterForm, inRange, toInt } from '../price';
 import { fmt } from '../session';
+import { ReportButton } from '../report';
+import { Appointment } from './Chat';
 import { api, useAsync, guarded, toast, t, L, money, ago } from '../session';
 import { Icon, SegLinks, Screen, Gate, Empty, Skeleton, PageHead, catColors } from '../ui';
 
@@ -32,6 +34,24 @@ function OfferForm({ job, reload }) {
       </div>
       <input className="input" type="text" maxLength={500} value={message} onChange={(e) => setMessage(e.target.value)} placeholder={t('msgPh')} aria-label={t('msgPh')} />
       <button className="btn sm" type="submit" disabled={busy} style={{ alignSelf: 'flex-start' }}>{t('sendOffer')}</button>
+    </form>
+  );
+}
+
+// After the job the artisan rates the client (other artisans see it on his next requests).
+function RateClient({ x, reload }) {
+  const [rating, setRating] = useState(5);
+  const [body, setBody] = useState('');
+  const send = (e) => {
+    e.preventDefault();
+    guarded(async () => { await api('/requests/' + x.id + '/client-review', { method: 'POST', body: { rating, body: body || null } }); toast(t('thanks')); reload(); });
+  };
+  return (
+    <form className="nego" onSubmit={send}>
+      <b>{t('rateClient', { n: x.clientName })}</b>
+      <div className="row g6">{[1, 2, 3, 4, 5].map((n) => <button type="button" key={n} className={`starbtn ${n <= rating ? 'on' : ''}`} onClick={() => setRating(n)} aria-label={String(n)}>★</button>)}</div>
+      <input className="input" maxLength={1000} value={body} onChange={(e) => setBody(e.target.value)} placeholder={t('ratePh')} />
+      <button className="btn sm" type="submit" style={{ alignSelf: 'flex-start' }}>{t('sendRate')}</button>
     </form>
   );
 }
@@ -73,7 +93,16 @@ function JobCard({ x, reload }) {
           <span className={`pill ${mine.status === 'ACCEPTED' ? 'pill-ok' : (mine.status === 'REJECTED' ? 'pill-mute' : 'pill-warn')}`}>{t('st_' + mine.status)}</span>
         </div>
         <Negotiation x={x} mine={mine} reload={reload} />
-        {x.clientPhone ? <a className="btn" href={`tel:${x.clientPhone}`}><Icon name="phone" size={18} />{t('clientCall')} · {x.clientName}</a> : null}
+        {mine.status === 'ACCEPTED' ? (
+          <>
+            <div className="row g8">
+              <a className="btn" style={{ flex: 1 }} href={`#/chat/${x.id}`}><Icon name="chatb" size={18} />{t('chat')}{x.unreadMessages ? <span className="cbadge">{x.unreadMessages}</span> : null}</a>
+              {x.clientPhone ? <a className="btn ghost" style={{ flex: 1 }} href={`tel:${x.clientPhone}`}><Icon name="phone" size={18} />{x.clientName}</a> : null}
+            </div>
+            <Appointment requestId={x.id} at={x.appointmentAt} by={x.appointmentBy} confirmed={x.appointmentConfirmed} myRole="ARTISAN" status={x.status} onChange={reload} />
+          </>
+        ) : null}
+        {mine.status === 'ACCEPTED' && x.status === 'DONE' && !x.clientReviewedByMe ? <RateClient x={x} reload={reload} /> : null}
       </>
     );
   } else if (x.status === 'OPEN') {
@@ -88,6 +117,10 @@ function JobCard({ x, reload }) {
       </div>
       <div style={{ fontSize: 14, color: 'var(--ink-2)', lineHeight: 1.5 }}>{x.description}</div>
       <MediaGallery media={x.media} />
+      <div className="row between g8 wrap">
+        <span className="muted xs">{t('clientLbl')}: {x.clientName}{x.clientReviewCount > 0 ? <> · <span className="star-i">★</span> {Number(x.clientRating).toFixed(1)} ({x.clientReviewCount})</> : <> · {t('clientNew')}</>}</span>
+        <ReportButton targetType="REQUEST" targetId={x.id} className="link muted xs" />
+      </div>
       <RequestPlace r={x} directions />
       <span className="row g6 muted small num"><Icon name="cash" size={16} />{t('budgetLbl', { v: money(x.budget) })}</span>
       {extra}

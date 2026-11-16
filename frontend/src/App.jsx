@@ -12,11 +12,16 @@ import Login from './views/Login';
 import Notifications from './views/Notifications';
 import Admin from './views/Admin';
 import Onboarding from './views/Onboarding';
+import Chat from './views/Chat';
+import Plan from './views/Plan';
+import { syncPush } from './push';
+import { useConfig } from './session';
 
-const VIEWS = { home: Home, explore: Explore, artisan: Artisan, new: NewRequest, requests: Requests, jobs: Jobs, me: Me, login: Login, notifications: Notifications, admin: Admin, onboarding: Onboarding };
+const VIEWS = { home: Home, explore: Explore, artisan: Artisan, new: NewRequest, requests: Requests, jobs: Jobs, me: Me, login: Login, notifications: Notifications, admin: Admin, onboarding: Onboarding, chat: Chat, plan: Plan };
 
 function guard(name, token, user) {
   if ((name === 'new' || name === 'requests' || name === 'jobs' || name === 'notifications') && !token) { setNext(location.hash || '#/'); return '#/login'; }
+  if ((name === 'chat' || name === 'plan') && !token) { setNext(location.hash); return '#/login'; }
   if (name === 'onboarding' && !token) { setNext('#/onboarding'); return '#/login'; }
   if (name === 'onboarding' && user && !isArtisan()) return '#/';
   if (name === 'jobs' && user && isArtisan() && !artisanReady()) return '#/onboarding';
@@ -37,6 +42,9 @@ export default function App() {
 
   useEffect(() => { if (redirect) location.replace(redirect); }, [redirect]);
   useEffect(() => { loadConfig(); refreshMe(); }, []);
+  const cfg = useConfig();
+  // push: register this device once logged in (silent when the permission was already given)
+  useEffect(() => { if (token) syncPush(cfg); }, [token, cfg]);
   useEffect(() => { window.scrollTo(0, 0); }, [name, r.id]);
   // Live notifications: one open connection while logged in.
   useEffect(() => {
