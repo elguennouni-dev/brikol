@@ -19,6 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
  * or when the phone already has an account (an existing password is never overwritten).
  */
 @Component
+@org.springframework.core.annotation.Order(2)
 public class AdminBootstrap implements ApplicationRunner {
     private static final Logger log = LoggerFactory.getLogger(AdminBootstrap.class);
 

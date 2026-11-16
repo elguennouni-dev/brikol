@@ -35,6 +35,7 @@ import java.util.Map;
  */
 @Component
 @ConditionalOnProperty(name = "app.seed", havingValue = "true")
+@org.springframework.core.annotation.Order(1)
 public class DemoDataSeeder implements ApplicationRunner {
     private static final String PASSWORD = "demo1234";
 
@@ -64,7 +65,8 @@ public class DemoDataSeeder implements ApplicationRunner {
     @Override
     @Transactional
     public void run(ApplicationArguments args) {
-        if (users.count() > 0) {
+        // only an empty database (the first admin, created at start-up, does not count)
+        if (users.count() > users.countByRole(ma.sanai3i.domain.Role.ADMIN)) {
             return;
         }
         hash = encoder.encode(PASSWORD);

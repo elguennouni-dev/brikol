@@ -26,11 +26,6 @@ body.sheet-open{overflow:hidden}
 .locbtn.busy .ic{animation:spin 1s linear infinite}
 .leaflet-bottom.leaflet-right .leaflet-control-zoom{margin-bottom:156px}
 .sheet-bot{flex:none;background:#fff;border-top:1px solid var(--line);padding:16px 16px calc(16px + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:14px;border-radius:24px 24px 0 0;margin-top:-20px;position:relative;z-index:600;box-shadow:0 -8px 30px rgba(14,43,34,.1)}
-.pdot{width:42px;height:42px;border-radius:21px;background:var(--lime);display:grid;place-items:center;flex:none}
-.placecard{display:flex;align-items:center;gap:12px;padding:14px 16px;border-radius:18px;border:1px solid var(--line);background:#fff;width:100%;text-align:start;color:var(--ink)}
-.placecard .go{margin-inline-start:auto;color:var(--green-ink);font-weight:800;font-size:13.5px;white-space:nowrap}
-.placeline{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--ink-2);min-width:0}
-.placeline a{color:var(--green-ink);font-weight:800;white-space:nowrap}
 @keyframes spin{to{transform:rotate(360deg)}}
 @keyframes fadeIn{from{opacity:0}to{opacity:1}}
 @media (min-width:960px){

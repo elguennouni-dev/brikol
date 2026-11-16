@@ -82,16 +82,16 @@ function RequestCard({ r, reload, goDone }) {
                   {o.message ? <span className="muted xs">{o.message}</span> : null}
                 </div>
                 <div className="col" style={{ alignItems: 'flex-end', gap: 5 }}>
-                  {o.firstPrice && o.firstPrice !== o.price && o.lastBy === 'ARTISAN' ? <span className="strike xs num">{fmt(o.firstPrice)}</span> : null}
+                  {o.firstPrice && o.firstPrice !== o.price && o.lastBy !== 'CLIENT' ? <span className="strike xs num">{fmt(o.firstPrice)}</span> : null}
                   <b className="num" style={{ fontSize: 14, whiteSpace: 'nowrap' }}>{o.lastBy === 'CLIENT' ? '…' : money(o.price)}</b>
-                  {o.lastBy === 'ARTISAN' ? <button className="btn sm" onClick={() => accept(o.id)}>{t('accept')}</button> : null}
+                  {o.lastBy !== 'CLIENT' ? <button className="btn sm" onClick={() => accept(o.id)}>{t('accept')}</button> : null}
                 </div>
               </div>
               {o.lastBy === 'CLIENT' ? <div className="note wait" style={{ marginTop: -4 }}><Icon name="clock" size={18} />{t('waitArtisan', { v: money(o.price) })}</div> : null}
-              {o.lastBy === 'ARTISAN' && o.rounds < o.maxRounds ? (
+              {o.lastBy !== 'CLIENT' && (o.rounds || 0) < (o.maxRounds || 6) ? (
                 nego === o.id
                   ? <CounterForm min={r.priceMin} max={r.priceMax} current={o.price} onSend={(p) => counter(o, p)} onCancel={() => setNego(null)} />
-                  : <button className="link" style={{ alignSelf: 'flex-start', marginTop: -4 }} onClick={() => setNego(o.id)}>{t('negotiate')} · {t('roundsLeft', { n: o.maxRounds - o.rounds })}</button>
+                  : <button className="link" style={{ alignSelf: 'flex-start', marginTop: -4 }} onClick={() => setNego(o.id)}>{t('negotiate')} · {t('roundsLeft', { n: (o.maxRounds || 6) - (o.rounds || 0) })}</button>
               ) : null}</div>
             ))}
           </div>

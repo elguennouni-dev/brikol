@@ -56,6 +56,29 @@ Password `demo1234`
 
 Errors are codes (e.g. `PHONE_TAKEN`) translated by the web app.
 
+## Requests: photos, video, voice notes
+`POST /api/uploads` (multipart: `file`, `purpose`). Clients attach up to 6 files to a request (`mediaIds`): photos (resized to
+1600 px in the browser, JPEG/PNG/WebP, 10 MB), video (MP4/MOV/WebM/3GP, 60 MB), voice notes recorded in the app (WebM/MP4 audio, 15 MB).
+Files live in `UPLOADS_DIR` (production: `deploy/uploads`, a Docker volume, not in Git) and are served at `/media/{uuid}`.
+Artisan ID-card images (`ID_FRONT`, `ID_BACK`) are private: `/api/media/{id}` for the owner and admins only.
+Behind Nginx raise the upload limit (aaPanel: site > Config, `client_max_body_size 100m;`).
+
+## Prices and negotiation
+Each trade has hard bounds (`categories.min_price/max_price`, editable by the admin). `PricingService` narrows them from real
+accepted prices of the last 12 months when there are 5+ (60 % of the 10th percentile to 160 % of the 90th). The range is frozen
+on the request (`price_min/price_max`) and every budget, offer and counter-offer must be inside it (`PRICE_OUT_OF_RANGE`).
+Prices are typed by hand. Negotiation on an offer: the client counters (`POST /api/requests/{id}/offers/{offerId}/counter`), the
+artisan counters back (`POST /api/artisan/offers/{offerId}/counter`) or agrees (`.../agree`, the deal is closed like an acceptance).
+6 counter-offers max per offer. The client can accept only the artisan's latest price.
+
+## Artisan activation
+New artisans are `DRAFT`. They fill a file (`/app/#/onboarding`, `GET/PUT /api/artisan/me/onboarding`): full name, CIN + photos
+(front/back), photo, years, description, trade, workshop location on the map and travel radius, 2+ portfolio photos, then send it
+(`POST .../submit`, status `PENDING`, admins notified). Admin > Artisan files: approve (`APPROVED`, verified badge) or reject with a
+reason (`REJECTED`, the artisan fixes and resends). Until approved an artisan is not listed and cannot see requests or send offers.
+Approved artisans only see requests of their trade within their radius (same city when a position is missing), nearest first,
+with the distance; the exact address appears once their offer is accepted.
+
 ## Sign in with Google
 Web and iPhone (PWA in Safari): button "Continuer avec Google" on the login page (Google Identity Services).
 The browser gets an ID token, `POST /api/auth/google {credential}` verifies it on the server (Google's public keys, issuer,
