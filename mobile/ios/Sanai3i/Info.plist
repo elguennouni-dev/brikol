@@ -33,6 +33,12 @@
     </array>
     <key>UIRequiresFullScreen</key>
     <true/>
+    <key>NSCameraUsageDescription</key>
+    <string>Pour prendre en photo le problème. باش تصور المشكل.</string>
+    <key>NSMicrophoneUsageDescription</key>
+    <string>Pour enregistrer un message vocal. باش تسجل أوديو.</string>
+    <key>NSPhotoLibraryUsageDescription</key>
+    <string>Pour joindre des photos et vidéos. باش تزيد صور وفيديوهات.</string>
     <key>NSLocationWhenInUseUsageDescription</key>
     <string>Pour placer votre demande sur la carte. باش نحطو الطلب ديالك فالخريطة.</string>
     <key>BaseURL</key>

@@ -23,7 +23,8 @@ export default function Login({ route }) {
   const done = (res) => {
     setAuth(res.token, res.user);
     toast(t('welcome'));
-    location.hash = takeNext() || (res.user.role === 'ADMIN' ? '#/admin' : '#/');
+    const home = res.user.role === 'ADMIN' ? '#/admin' : (res.user.role === 'ARTISAN' && res.user.artisanStatus !== 'APPROVED' ? '#/onboarding' : '#/');
+    location.hash = takeNext() || home;
   };
 
   const onGoogle = (credential) => {

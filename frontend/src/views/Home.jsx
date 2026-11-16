@@ -1,4 +1,4 @@
-import { api, getCats, useAsync, useSession, t, L, isArtisan } from '../session';
+import { api, getCats, useAsync, useSession, t, L, isArtisan, artisanReady } from '../session';
 import { IC, Icon, ArtisanCard, CashBanner, Screen, Gate, Skeleton, LangButton, Bell, catColors } from '../ui';
 import { setLang } from '../session';
 
@@ -21,6 +21,9 @@ export default function Home() {
         <div className="row g8"><Bell /><LangButton onClick={() => setLang(lang === 'ar' ? 'fr' : 'ar')} /></div>
       </div>
 
+      {isArtisan() && !artisanReady() ? (
+        <a className="note wait" href="#/onboarding" style={{ textDecoration: 'none' }}><Icon name="doc" size={18} /><span className="grow">{t('finishFile')}</span><b>{t('openFile')} ›</b></a>
+      ) : null}
       <a className="search" href="#/explore">
         <Icon name="search" size={20} /><span className="grow ell" style={{ fontSize: 14.5 }}>{t('search')}</span>
         <span className="go"><Icon name="sliders" size={18} /></span>

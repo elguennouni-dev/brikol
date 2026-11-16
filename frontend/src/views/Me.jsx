@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { api, useAsync, useSession, setAuth, setLang, guarded, toast, errMsg, isArtisan, isAdmin, t } from '../session';
+import { api, useAsync, useSession, setAuth, setLang, guarded, toast, errMsg, isArtisan, isAdmin, artisanReady, t } from '../session';
 import { Avatar, Screen, PageHead, Icon } from '../ui';
 
 function AvailToggle() {
@@ -62,7 +62,10 @@ export default function Me() {
         </div>
       </div>
       {isAdmin() ? <a className="btn dark block" href="#/admin"><Icon name="shield" size={18} />{t('a_title')}</a> : null}
-      {isArtisan() ? <AvailToggle /> : null}
+      {isArtisan() ? (
+        <a className={`btn block ${artisanReady() ? 'ghost' : ''}`} href="#/onboarding"><Icon name="doc" size={18} />{t('openFile')}{artisanReady() ? '' : ' · ' + t('ob_' + (user.artisanStatus || 'DRAFT')).split('.')[0]}</a>
+      ) : null}
+      {artisanReady() ? <AvailToggle /> : null}
       {langSeg}
       <button className="btn ghost block" onClick={() => guarded(logout)}>{t('logout')}</button>
       {isArtisan() || isAdmin() ? null : <ArtisanCta onClick={() => setAuth(null, null)} />}

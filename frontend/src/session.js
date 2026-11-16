@@ -35,6 +35,12 @@ export function setAuth(token, u) {
 }
 export const isAdmin = () => !!snap.user && snap.user.role === 'ADMIN';
 export const isArtisan = () => !!snap.user && snap.user.role === 'ARTISAN';
+/** An artisan works on the platform only once an admin approved his file. */
+export const artisanReady = () => isArtisan() && snap.user.artisanStatus === 'APPROVED';
+export async function refreshMe() {
+  if (!snap.token) return;
+  try { const u = await api('/me'); if (u && snap.token) setAuth(snap.token, u); } catch (e) { /* handled in api() */ }
+}
 
 // where to go after login
 let nextHash = null;
@@ -170,11 +176,13 @@ export const useNotifs = () => useSyncExternalStore(nsub, () => nstate);
 
 export function notifText(n) {
   const name = snap.lang === 'ar' ? (n.actorAr || n.actorFr || '') : (n.actorFr || n.actorAr || '');
-  const v = n.kind === 'OFFER_RECEIVED' ? money(n.detail) : (n.detail || (n.requestId ? '#' + n.requestId : ''));
+  const v = (n.kind === 'OFFER_RECEIVED' || n.kind === 'OFFER_COUNTERED' || n.kind === 'OFFER_AGREED') ? money(n.detail) : (n.detail || (n.requestId ? '#' + n.requestId : ''));
   return t('n_' + n.kind, { name, v, cat: catName(n.detail) });
 }
 export function notifHref(n) {
   if (n.kind === 'ANNOUNCEMENT') return '#/notifications';
+  if (n.kind === 'ARTISAN_APPROVED' || n.kind === 'ARTISAN_REJECTED') return '#/onboarding';
+  if (n.kind === 'ARTISAN_SUBMITTED') return '#/admin/files';
   if (n.kind === 'NEW_REQUEST') return '#/jobs';
   return isArtisan() ? '#/jobs?tab=mine' : '#/requests';
 }
@@ -198,6 +206,7 @@ function onLive(n) {
   if (nstate.items.some((x) => x.id === n.id)) return;
   nset({ items: [n, ...nstate.items].slice(0, 50), unread: nstate.unread + 1, tick: nstate.tick + 1 });
   toast(notifText(n));
+  if (n.kind === 'ARTISAN_APPROVED' || n.kind === 'ARTISAN_REJECTED') refreshMe();
 }
 
 // Live channel: Server-Sent Events read with fetch, so the login token goes in a header (not in the URL).

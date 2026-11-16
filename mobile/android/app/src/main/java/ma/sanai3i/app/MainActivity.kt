@@ -11,6 +11,11 @@ import android.os.Bundle
 import android.view.Gravity
 import android.view.View
 import android.webkit.GeolocationPermissions
+import android.webkit.PermissionRequest
+import android.webkit.ValueCallback
+import android.provider.MediaStore
+import androidx.core.content.FileProvider
+import java.io.File
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceError
 import android.webkit.WebResourceRequest
@@ -41,6 +46,36 @@ class MainActivity : ComponentActivity() {
     // Location for the map: the web page asks, Android asks the user once, the answer goes back to the page.
     private var geoOrigin: String? = null
     private var geoCallback: GeolocationPermissions.Callback? = null
+    // <input type="file"> (photos, videos) and the camera
+    private var fileCallback: ValueCallback<Array<Uri>>? = null
+    private var cameraPhoto: Uri? = null
+    private val fileChooser =
+        registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { res ->
+            val cb = fileCallback ?: return@registerForActivityResult
+            fileCallback = null
+            var uris: Array<Uri>? = null
+            if (res.resultCode == android.app.Activity.RESULT_OK) {
+                val data = res.data
+                val clip = data?.clipData
+                uris = when {
+                    clip != null -> Array(clip.itemCount) { clip.getItemAt(it).uri }
+                    data?.data != null -> arrayOf(data.data!!)
+                    cameraPhoto != null -> arrayOf(cameraPhoto!!)
+                    else -> null
+                }
+            }
+            cb.onReceiveValue(uris)
+        }
+
+    // Microphone for voice notes: asked when the page starts recording.
+    private var pendingMic: PermissionRequest? = null
+    private val micPermission =
+        registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+            val req = pendingMic ?: return@registerForActivityResult
+            pendingMic = null
+            if (granted) req.grant(arrayOf(PermissionRequest.RESOURCE_AUDIO_CAPTURE)) else req.deny()
+        }
+
     private val locationPermission =
         registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { result ->
             geoCallback?.invoke(geoOrigin, result.values.any { it }, false)
@@ -66,6 +101,55 @@ class MainActivity : ComponentActivity() {
             settings.userAgentString = settings.userAgentString + " Sanai3iApp/Android"
             webViewClient = ShellClient()
             webChromeClient = object : WebChromeClient() {
+                override fun onShowFileChooser(view: WebView, callback: ValueCallback<Array<Uri>>,
+                                               params: WebChromeClient.FileChooserParams): Boolean {
+                    fileCallback?.onReceiveValue(null)
+                    fileCallback = callback
+                    cameraPhoto = null
+                    val types = params.acceptTypes.flatMap { it.split(",") }.map { it.trim() }.filter { it.isNotEmpty() }
+                    val pick = Intent(Intent.ACTION_GET_CONTENT).addCategory(Intent.CATEGORY_OPENABLE).setType("*/*")
+                    if (types.isNotEmpty()) pick.putExtra(Intent.EXTRA_MIME_TYPES, types.toTypedArray())
+                    if (params.mode == WebChromeClient.FileChooserParams.MODE_OPEN_MULTIPLE) pick.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true)
+                    val extras = mutableListOf<Intent>()
+                    val wantsImage = types.isEmpty() || types.any { it.startsWith("image") }
+                    val wantsVideo = types.any { it.startsWith("video") }
+                    if (wantsImage) {
+                        try {
+                            val dir = File(cacheDir, "camera").apply { mkdirs() }
+                            val photo = File.createTempFile("photo_", ".jpg", dir)
+                            cameraPhoto = FileProvider.getUriForFile(this@MainActivity, "$packageName.files", photo)
+                            extras += Intent(MediaStore.ACTION_IMAGE_CAPTURE)
+                                .putExtra(MediaStore.EXTRA_OUTPUT, cameraPhoto)
+                                .addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
+                        } catch (e: Exception) {
+                            cameraPhoto = null
+                        }
+                    }
+                    if (wantsVideo) extras += Intent(MediaStore.ACTION_VIDEO_CAPTURE).putExtra(MediaStore.EXTRA_DURATION_LIMIT, 90)
+                    val chooser = Intent.createChooser(pick, null).putExtra(Intent.EXTRA_INITIAL_INTENTS, extras.toTypedArray())
+                    return try {
+                        fileChooser.launch(chooser)
+                        true
+                    } catch (e: ActivityNotFoundException) {
+                        fileCallback = null
+                        false
+                    }
+                }
+
+                override fun onPermissionRequest(request: PermissionRequest) {
+                    val ours = request.origin.host == baseUri.host
+                    if (!ours || !request.resources.contains(PermissionRequest.RESOURCE_AUDIO_CAPTURE)) {
+                        request.deny()
+                        return
+                    }
+                    if (ContextCompat.checkSelfPermission(this@MainActivity, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
+                        request.grant(arrayOf(PermissionRequest.RESOURCE_AUDIO_CAPTURE))
+                    } else {
+                        pendingMic = request
+                        micPermission.launch(Manifest.permission.RECORD_AUDIO)
+                    }
+                }
+
                 override fun onGeolocationPermissionsShowPrompt(origin: String, callback: GeolocationPermissions.Callback) {
                     if (Uri.parse(origin).host != baseUri.host) {   // only our own site gets the location
                         callback.invoke(origin, false, false)

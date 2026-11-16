@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { api, useAsync, useSession, isAdmin, guarded, toast, t, L, fmt, ago, getSession } from '../session';
-import { RequestPlace } from '../places';
+import { RequestPlace, MapPreview } from '../places';
+import { MediaGallery, PrivateImg, Lightbox } from '../media';
 import { Screen, Icon, Gate, Skeleton, Empty, BackButton } from '../ui';
 
-const SECTIONS = [['', 'a_dash'], ['users', 'a_users'], ['requests', 'a_requests'], ['reviews', 'a_reviews'], ['categories', 'a_cats'], ['audit', 'a_audit'], ['tools', 'a_tools']];
+const SECTIONS = [['', 'a_dash'], ['files', 'a_files'], ['users', 'a_users'], ['requests', 'a_requests'], ['reviews', 'a_reviews'], ['categories', 'a_cats'], ['audit', 'a_audit'], ['tools', 'a_tools']];
 const STATUS_PILL = { OPEN: 'pill-lime', ACCEPTED: 'pill-warn', DONE: 'pill-ok', CANCELLED: 'pill-mute' };
 const statusLabel = (s) => t('a_status' + s.charAt(0) + s.slice(1).toLowerCase());
 const qs = (o) => Object.entries(o).filter(([, v]) => v !== '' && v != null).map(([k, v]) => k + '=' + encodeURIComponent(v)).join('&');
@@ -64,6 +65,9 @@ function Dashboard() {
   return (
     <Gate st={st} loader={<Skeleton rows={5} />}>{(s) => (
       <>
+        {s.pendingArtisans ? (
+          <a className="note wait" href="#/admin/files" style={{ textDecoration: 'none' }}><Icon name="doc" size={18} /><span className="grow">{t('a_pendingFiles')}</span><b className="num">{s.pendingArtisans} ›</b></a>
+        ) : null}
         <div className="a-stats">
           <Stat n={fmt(s.users)} label={t('a_totalUsers')} />
           <Stat n={fmt(s.clients)} label={t('a_clients')} />
@@ -183,6 +187,7 @@ function UserDetail({ id }) {
                     <input className="inp" value={reason} maxLength={200} onChange={(e) => setReason(e.target.value)} placeholder={t('a_reason')} />
                   </Confirm>
                 )}
+              {u.artisanId ? <a className="btn sm ghost" href={`#/admin/file/${u.artisanId}`}><Icon name="doc" size={16} />{t('a_files')}</a> : null}
               {u.artisanId ? (
                 <button className="btn sm ghost" onClick={() => act(() => api(`/admin/artisans/${u.artisanId}/verified`, { method: 'POST', body: { verified: !u.verified } }))}>
                   <Icon name="checkMark" size={16} />{u.verified ? t('a_unverify') : t('a_verify')}
@@ -273,6 +278,8 @@ function RequestDetail({ id }) {
             </div>
             {d.lat != null ? <RequestPlace r={{ lat: d.lat, lng: d.lng, address: d.address || `${d.lat}, ${d.lng}` }} /> : null}
             <div><span className="muted small">{t('a_description')}</span><p style={{ margin: '4px 0 0' }} dir="auto">{d.description}</p></div>
+            <MediaGallery media={d.media} />
+            <span className="muted xs">{t('a_priceRange')}: {fmt(d.priceMin)} – {fmt(d.priceMax)} {t('dh')}</span>
             {d.reviewRating ? <div className="note ok">{t('a_reviewBody')}: {d.reviewRating}★ {d.reviewBody || ''}</div> : null}
           </div>
           <div className="card col g8">
@@ -319,12 +326,12 @@ function Reviews() {
 }
 
 function CategoryForm({ initial, onSaved, onCancel }) {
-  const [c, setC] = useState(initial || { code: '', nameAr: '', nameFr: '', sortOrder: 99 });
+  const [c, setC] = useState(initial || { code: '', nameAr: '', nameFr: '', sortOrder: 99, minPrice: 100, maxPrice: 50000 });
   const edit = !!initial;
   const save = (e) => {
     e.preventDefault();
     guarded(async () => {
-      const body = { ...c, sortOrder: Number(c.sortOrder) || 0 };
+      const body = { code: c.code, nameAr: c.nameAr, nameFr: c.nameFr, sortOrder: Number(c.sortOrder) || 0, minPrice: Number(c.minPrice) || 0, maxPrice: Number(c.maxPrice) || 0 };
       await api(edit ? '/admin/categories/' + initial.id : '/admin/categories', { method: edit ? 'PUT' : 'POST', body });
       toast(t('a_done')); onSaved();
     });
@@ -336,6 +343,8 @@ function CategoryForm({ initial, onSaved, onCancel }) {
       {f('nameAr', t('a_nameAr'), { dir: 'rtl' })}
       {f('nameFr', t('a_nameFr'))}
       {f('sortOrder', t('a_order'), { type: 'number', min: 0 })}
+      {f('minPrice', t('a_minPrice'), { type: 'number', min: 0, title: t('a_minPrice') })}
+      {f('maxPrice', t('a_maxPrice'), { type: 'number', min: 1, title: t('a_maxPrice') })}
       <span className="row g8"><button className="btn sm" type="submit">{t('a_save')}</button>{onCancel ? <button type="button" className="btn sm ghost" onClick={onCancel}>{t('a_cancel')}</button> : null}</span>
     </form>
   );
@@ -354,7 +363,7 @@ function Categories() {
             ? <div key={c.id} className="trow"><CategoryForm initial={c} onSaved={done} onCancel={() => setEditing(null)} /></div>
             : (
               <div key={c.id} className="trow">
-                <span className="grow col" style={{ gap: 2 }}><b>{L(c, 'name')} <span className="muted xs" dir="ltr">({c.code})</span></b><span className="muted xs">{t('a_catUsed', { a: c.artisans, r: c.requests })}</span></span>
+                <span className="grow col" style={{ gap: 2 }}><b>{L(c, 'name')} <span className="muted xs" dir="ltr">({c.code})</span></b><span className="muted xs">{t('a_catUsed', { a: c.artisans, r: c.requests })} · {t('a_priceRange')}: {fmt(c.minPrice)} – {fmt(c.maxPrice)} {t('dh')}</span></span>
                 <span className="row g8">
                   <button className="link" onClick={() => setEditing(c.id)}>{t('a_edit')}</button>
                   {c.artisans + c.requests === 0 ? <Confirm label={t('a_delete')} onYes={() => guarded(async () => { await api('/admin/categories/' + c.id, { method: 'DELETE' }); toast(t('a_done')); st.reload(); })} /> : null}
@@ -471,13 +480,114 @@ function Tools() {
   );
 }
 
+// ------------------------------------------------------------ artisan activation files
+const FILE_STATUSES = ['PENDING', 'REJECTED', 'DRAFT', 'APPROVED'];
+
+function Files() {
+  const [status, setStatus] = useState('PENDING');
+  const st = useAsync(() => api('/admin/artisan-files?status=' + status), [status]);
+  return (
+    <>
+      <div className="row g6 wrap">{FILE_STATUSES.map((s) => <button key={s} className={`chip ${status === s ? 'on' : ''}`} onClick={() => setStatus(s)}>{t('a_st_' + s)}</button>)}</div>
+      <Gate st={st} loader={<Skeleton rows={4} />}>{(list) => (list.length ? (
+        <div className="card tbl">
+          {list.map((a) => (
+            <a key={a.artisanId} className="trow" href={`#/admin/file/${a.artisanId}`}>
+              <span className="grow col" style={{ gap: 2, minWidth: 0 }}>
+                <b className="ell">{a.fullName}</b>
+                <span className="muted xs"><span dir="ltr">{a.phone}</span> · {getSession().lang === 'ar' ? a.categoryNameAr : a.categoryNameFr} · {a.city}</span>
+              </span>
+              <span className="col" style={{ alignItems: 'flex-end', gap: 4 }}>
+                <span className={`pill ${a.status === 'APPROVED' ? 'pill-ok' : a.status === 'PENDING' ? 'pill-lime' : 'pill-warn'}`}>{t('a_st_' + a.status)}</span>
+                {a.submittedAt ? <span className="muted xs">{t('a_submitted')} {ago(a.submittedAt)}</span> : null}
+              </span>
+            </a>
+          ))}
+        </div>
+      ) : <Empty>{t('a_noResults')}</Empty>)}</Gate>
+    </>
+  );
+}
+
+function FileDetail({ id }) {
+  const st = useAsync(() => api('/admin/artisan-files/' + id), [id]);
+  const cats = useAsync(() => api('/categories'), []);
+  const [reason, setReason] = useState('');
+  const [big, setBig] = useState(null);
+  const decide = (path, body) => guarded(async () => { await api(`/admin/artisan-files/${id}/${path}`, { method: 'POST', body }); toast(t('a_done')); st.reload(); });
+  return (
+    <Gate st={st} loader={<Skeleton rows={5} />}>{(d) => {
+      const f = d.file;
+      const cat = (cats.data || []).find((c) => c.code === f.categoryCode);
+      return (
+        <>
+          <div className="card col g12">
+            <div className="row g12">
+              {f.avatar ? <img className="avatar" style={{ width: 64, height: 64, borderRadius: 32, objectFit: 'cover', cursor: 'zoom-in' }} src={f.avatar.url} alt="" onClick={() => setBig(f.avatar.url)} /> : <div className="avatar">?</div>}
+              <div className="col grow" style={{ gap: 2, minWidth: 0 }}>
+                <b style={{ fontSize: 19 }}>{f.fullName}</b>
+                <span className="muted small">{cat ? L(cat, 'name') : f.categoryCode} · {f.yearsExperience} {t('obYears').toLowerCase()}</span>
+              </div>
+              <span className={`pill ${f.status === 'APPROVED' ? 'pill-ok' : f.status === 'PENDING' ? 'pill-lime' : 'pill-warn'}`}>{t('a_st_' + f.status)}</span>
+            </div>
+            {f.status === 'REJECTED' && f.rejectionReason ? <div className="note wait">{f.rejectionReason}</div> : null}
+            <div className="kvs">
+              <Field k={t('a_phone')} v={<span dir="ltr">{d.phone}</span>} />
+              <Field k={t('obCin')} v={<span dir="ltr">{f.cin || '–'}</span>} />
+              <Field k={t('obWhatsapp')} v={<span dir="ltr">{f.whatsapp || '–'}</span>} />
+              <Field k={t('a_joined')} v={when(d.createdAt)} />
+              {d.email ? <Field k="E-mail" v={<span dir="ltr">{d.email}</span>} /> : null}
+              {d.submittedAt ? <Field k={t('a_submitted')} v={when(d.submittedAt)} /> : null}
+            </div>
+            <div><span className="muted small">{t('obBio').split('(')[0]}</span><p style={{ margin: '4px 0 0' }} dir="auto">{f.bio || '–'}</p></div>
+          </div>
+
+          <div className="card col g8">
+            <b>{t('obIdentity')}</b>
+            <div className="grid2c">
+              {[['idFront', 'obIdFront'], ['idBack', 'obIdBack']].map(([k, label]) => (
+                <div key={k} className="col g6"><span className="muted xs">{t(label)}</span>
+                  {f[k] ? <div className="islot has"><PrivateImg src={f[k].url} onClick={(u) => setBig(u)} /></div> : <div className="islot">–</div>}</div>
+              ))}
+            </div>
+          </div>
+
+          <div className="card col g8">
+            <b>{t('obZone')}</b>
+            <span className="small">{[f.address, f.city].filter(Boolean).join(' · ') || '–'} · {t('obRadius', { n: f.radiusKm })}</span>
+            {f.lat != null ? <MapPreview lat={f.lat} lng={f.lng} radiusKm={f.radiusKm} height={200} /> : null}
+          </div>
+
+          <div className="card col g8">
+            <b>{t('obPortfolio')}</b>
+            {f.portfolio.length ? <div className="mgrid">{f.portfolio.map((m) => <button key={m.id} type="button" className="mthumb" onClick={() => setBig(m.url)}><img src={m.url} alt="" /></button>)}</div> : <span className="muted small">–</span>}
+          </div>
+
+          {f.status === 'PENDING' ? (
+            <div className="card col g12">
+              <button className="btn" onClick={() => decide('approve')}><Icon name="checkMark" size={18} />{t('a_approve')}</button>
+              <Confirm label={t('a_reject')} onYes={() => decide('reject', { reason })}>
+                <input className="inp" value={reason} maxLength={300} onChange={(e) => setReason(e.target.value)} placeholder={t('a_rejectReason')} />
+              </Confirm>
+            </div>
+          ) : null}
+          {f.missing && f.missing.length && f.status !== 'APPROVED' ? <span className="muted xs">{t('obMissing')}{f.missing.map((k) => t('m_' + k)).join(', ')}</span> : null}
+          {big ? <Lightbox src={big} onClose={() => setBig(null)} /> : null}
+        </>
+      );
+    }}</Gate>
+  );
+}
+
 // ------------------------------------------------------------ page
 export default function Admin({ route }) {
   useSession();
   const sec = route.id || '';
-  const detail = sec === 'user' || sec === 'request';
+  const detail = sec === 'user' || sec === 'request' || sec === 'file';
   let body;
   if (!isAdmin()) body = <Empty>{t('a_forbidden')}</Empty>;
+  else if (sec === 'files') body = <Files />;
+  else if (sec === 'file') body = <FileDetail id={route.sub} />;
   else if (sec === 'users') body = <Users />;
   else if (sec === 'user') body = <UserDetail id={route.sub} />;
   else if (sec === 'requests') body = <Requests />;
@@ -487,11 +597,11 @@ export default function Admin({ route }) {
   else if (sec === 'audit') body = <Audit />;
   else if (sec === 'tools') body = <Tools />;
   else body = <Dashboard />;
-  const active = sec === 'user' ? 'users' : sec === 'request' ? 'requests' : sec;
+  const active = sec === 'user' ? 'users' : sec === 'request' ? 'requests' : sec === 'file' ? 'files' : sec;
   return (
     <Screen tab="admin" width="wide">
       <div className="row g12">
-        {detail ? <BackButton onClick={() => { location.hash = sec === 'user' ? '#/admin/users' : '#/admin/requests'; }} /> : null}
+        {detail ? <BackButton onClick={() => { location.hash = sec === 'user' ? '#/admin/users' : sec === 'file' ? '#/admin/files' : '#/admin/requests'; }} /> : null}
         <h1 className="h1" style={{ fontSize: 24 }}><Icon name="shield" size={22} /> {t('a_title')}</h1>
       </div>
       <nav className="atabs" aria-label={t('a_title')}>

@@ -2,10 +2,12 @@ import { useState } from 'react';
 import { api, getCats, useAsync, guarded, toast, t, L, fmt, back, useSession } from '../session';
 import { LocationSheet, MapPreview } from '../places';
 import { centerOf } from '../geo';
+import { MediaPicker } from '../media';
+import { inRange, toInt } from '../price';
 import { Icon, CashBanner, Screen, BackButton, Loader } from '../ui';
 
 // The draft survives navigation (the user may leave the screen and come back).
-const blank = () => ({ cat: 'paint', desc: '', hood: '', when: 'WEEK', budget: 1500, place: null });
+const blank = () => ({ cat: 'paint', desc: '', hood: '', when: 'WEEK', budget: '1500', place: null, media: [] });
 let draft = blank();
 
 export default function NewRequest() {
@@ -14,6 +16,13 @@ export default function NewRequest() {
   const [picking, setPicking] = useState(false);
   const { user } = useSession();
   const cats = useAsync(getCats, []);
+  const range = useAsync(() => api('/public/pricing/' + f.cat), [f.cat]);
+  const pmin = range.data ? range.data.min : 0;
+  const pmax = range.data ? range.data.max : 1000000;
+  const budget = toInt(f.budget);
+  const budgetOk = inRange(budget, pmin, pmax);
+  const setMedia = (fn) => setF((old) => { draft = { ...old, media: typeof fn === 'function' ? fn(old.media) : fn }; return draft; });
+  const stepBudget = (d) => set({ budget: String(Math.min(pmax, Math.max(pmin, (Number.isFinite(budget) ? budget : pmin) + d))) });
   const set = (patch) => setF((old) => { draft = { ...old, ...patch }; return draft; });
 
   const submit = (e) => {
@@ -22,8 +31,10 @@ export default function NewRequest() {
     guarded(async () => {
       if (!f.desc || f.desc.trim().length < 5) throw { code: 'VALIDATION' };
       if (!f.place) { setPicking(true); throw { code: 'PLACE_REQUIRED' }; }
+      if (!budgetOk) throw { code: 'PRICE_OUT_OF_RANGE' };
+      if (f.media.some((m) => !m.id)) throw { code: 'MEDIA_UPLOADING' };
       const p = f.place;
-      await api('/requests', { method: 'POST', body: { categoryCode: f.cat, description: f.desc.trim(), neighborhood: f.hood || p.hood || null, city: p.city || null, lat: p.lat, lng: p.lng, address: p.address || null, whenPref: f.when, budget: f.budget } });
+      await api('/requests', { method: 'POST', body: { categoryCode: f.cat, description: f.desc.trim(), neighborhood: f.hood || p.hood || null, city: p.city || null, lat: p.lat, lng: p.lng, address: p.address || null, whenPref: f.when, budget, mediaIds: f.media.map((m) => m.id) } });
       draft = blank();
       toast(t('published'));
       location.hash = '#/requests';
@@ -47,6 +58,10 @@ export default function NewRequest() {
         <div>
           <label className="lbl" htmlFor="desc">{t('qDesc')}</label>
           <textarea id="desc" className="area" rows={4} maxLength={2000} value={f.desc} onChange={(e) => set({ desc: e.target.value })} placeholder={t('descPh')} />
+        </div>
+        <div>
+          <span className="lbl">{t('qMedia')}</span>
+          <MediaPicker items={f.media} setItems={setMedia} />
         </div>
         <div>
           <span className="lbl">{t('qWhere')}</span>
@@ -79,10 +94,16 @@ export default function NewRequest() {
           <span className="lbl">{t('qBudget')}</span>
           <div className="budget">
             <div className="row between" style={{ width: '100%' }}>
-              <button type="button" className="step" onClick={() => set({ budget: Math.max(0, f.budget - 100) })} aria-label="-100"><Icon name="minus" size={20} /></button>
-              <div className="row g6" style={{ alignItems: 'baseline' }}><span className="amt num">{fmt(f.budget)}</span><b>{t('dh')}</b></div>
-              <button type="button" className="step plus" onClick={() => set({ budget: Math.min(1000000, f.budget + 100) })} aria-label="+100"><Icon name="plus" size={20} /></button>
+              <button type="button" className="step" onClick={() => stepBudget(-50)} aria-label="-50"><Icon name="minus" size={20} /></button>
+              <div className="row g6" style={{ alignItems: 'baseline' }}>
+                <input className="amtin num" type="text" inputMode="numeric" pattern="[0-9]*" value={f.budget} aria-label={t('qBudget')}
+                  onChange={(e) => set({ budget: e.target.value.replace(/[^\d]/g, '').slice(0, 7) })} style={budgetOk || f.budget === '' ? null : { color: '#FF9D94' }} />
+                <b>{t('dh')}</b>
+              </div>
+              <button type="button" className="step plus" onClick={() => stepBudget(50)} aria-label="+50"><Icon name="plus" size={20} /></button>
             </div>
+            {range.data ? <span className="range-note" style={budgetOk ? null : { color: '#FF9D94', fontWeight: 700 }}>{t('priceRange', { min: fmt(pmin) + ' ' + t('dh'), max: fmt(pmax) + ' ' + t('dh') })}</span> : null}
+            {range.data && range.data.typicalLow ? <span className="range-note">{t('priceTypical', { a: fmt(range.data.typicalLow), b: fmt(range.data.typicalHigh) + ' ' + t('dh') })}</span> : null}
             <span className="xs" style={{ color: '#C3D4CB', textAlign: 'center' }}>{t('budgetHint')}</span>
           </div>
         </div>

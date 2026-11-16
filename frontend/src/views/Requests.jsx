@@ -1,5 +1,8 @@
 import { useState } from 'react';
 import { RequestPlace } from '../places';
+import { MediaGallery } from '../media';
+import { CounterForm } from '../price';
+import { fmt } from '../session';
 import { api, useAsync, guarded, toast, t, L, money, ago, etaLabel } from '../session';
 import { Icon, Avatar, SegLinks, Screen, Gate, Empty, Skeleton, PageHead, catColors } from '../ui';
 
@@ -35,6 +38,13 @@ function ReviewForm({ r, onDone }) {
 
 function RequestCard({ r, reload, goDone }) {
   const [pending, setPending] = useState(null);
+  const [nego, setNego] = useState(null);   // offer id being countered
+  const counter = (o, price) => guarded(async () => {
+    await api('/requests/' + r.id + '/offers/' + o.id + '/counter', { method: 'POST', body: { price } });
+    toast(t('counterSent'));
+    setNego(null);
+    reload();
+  });
   const col = catColors(r.categoryCode);
   const pillCls = r.status === 'ACCEPTED' ? 'pill-ok' : (r.status === 'OPEN' ? (r.offerCount > 0 ? 'pill-lime' : 'pill-warn') : 'pill-mute');
   const pillTxt = r.status === 'OPEN' && r.offerCount > 0 ? t('offersN', { n: r.offerCount }) : t('st_' + r.status);
@@ -62,7 +72,7 @@ function RequestCard({ r, reload, goDone }) {
           <div className="col g10">
             <b style={{ fontSize: 14 }}>{t('offersT')}</b>
             {r.offers.map((o) => (
-              <div className="offer" key={o.id}>
+              <div className="col g8" key={o.id}><div className="offer">
                 <Avatar name={L(o, 'artisanName')} id={o.artisanId} />
                 <div className="grow col" style={{ gap: 2 }}>
                   <a href={`#/artisan/${o.artisanId}`} className="ell" style={{ fontWeight: 800, fontSize: 14 }}>{L(o, 'artisanName')}</a>
@@ -72,10 +82,17 @@ function RequestCard({ r, reload, goDone }) {
                   {o.message ? <span className="muted xs">{o.message}</span> : null}
                 </div>
                 <div className="col" style={{ alignItems: 'flex-end', gap: 5 }}>
-                  <b className="num" style={{ fontSize: 14, whiteSpace: 'nowrap' }}>{money(o.price)}</b>
-                  <button className="btn sm" onClick={() => accept(o.id)}>{t('accept')}</button>
+                  {o.firstPrice && o.firstPrice !== o.price && o.lastBy === 'ARTISAN' ? <span className="strike xs num">{fmt(o.firstPrice)}</span> : null}
+                  <b className="num" style={{ fontSize: 14, whiteSpace: 'nowrap' }}>{o.lastBy === 'CLIENT' ? '…' : money(o.price)}</b>
+                  {o.lastBy === 'ARTISAN' ? <button className="btn sm" onClick={() => accept(o.id)}>{t('accept')}</button> : null}
                 </div>
               </div>
+              {o.lastBy === 'CLIENT' ? <div className="note wait" style={{ marginTop: -4 }}><Icon name="clock" size={18} />{t('waitArtisan', { v: money(o.price) })}</div> : null}
+              {o.lastBy === 'ARTISAN' && o.rounds < o.maxRounds ? (
+                nego === o.id
+                  ? <CounterForm min={r.priceMin} max={r.priceMax} current={o.price} onSend={(p) => counter(o, p)} onCancel={() => setNego(null)} />
+                  : <button className="link" style={{ alignSelf: 'flex-start', marginTop: -4 }} onClick={() => setNego(o.id)}>{t('negotiate')} · {t('roundsLeft', { n: o.maxRounds - o.rounds })}</button>
+              ) : null}</div>
             ))}
           </div>
         ) : <div className="note wait"><Icon name="clock" size={18} />{t('waitOffers')}</div>}
@@ -107,6 +124,7 @@ function RequestCard({ r, reload, goDone }) {
         </div>
       </div>
       <div style={{ fontSize: 14, color: 'var(--ink-2)', lineHeight: 1.5 }}>{r.description}</div>
+      <MediaGallery media={r.media} />
       <RequestPlace r={r} withMap={false} />
       <div className="row between g8">
         <span className="row g6 muted small num"><Icon name="cash" size={16} />{t('budgetLbl', { v: money(r.budget) })}</span>

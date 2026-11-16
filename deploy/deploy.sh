@@ -2,7 +2,7 @@
 # Run on the server, from this folder:  bash deploy.sh
 set -euo pipefail
 cd "$(dirname "$0")"
-mkdir -p downloads
+mkdir -p downloads uploads
 # The secrets must never change once the database exists (MySQL keeps the password it was created with).
 # A copy of .env is kept outside the project folder, so a fresh clone / unzip / git reset cannot lose it.
 SAFE_DIR="${SANAI3I_SECRETS:-$HOME/.sanai3i}"

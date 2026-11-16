@@ -152,8 +152,8 @@ export function Nav({ active }) {
 }
 
 // ------------------------------------------------------------ notifications UI
-const NOTIF_ICON = { NEW_REQUEST: 'clip', OFFER_RECEIVED: 'cash', OFFER_ACCEPTED: 'phone', OFFER_REJECTED: 'user', REQUEST_CANCELLED: 'minus', JOB_DONE: 'checkMark', REVIEW_RECEIVED: 'star', ANNOUNCEMENT: 'bell', ADMIN_CANCELLED: 'minus' };
-const NOTIF_TONE = { NEW_REQUEST: 'lime', OFFER_RECEIVED: 'lime', OFFER_ACCEPTED: 'ok', OFFER_REJECTED: 'mute', REQUEST_CANCELLED: 'warn', JOB_DONE: 'ok', REVIEW_RECEIVED: 'warn', ANNOUNCEMENT: 'lime', ADMIN_CANCELLED: 'warn' };
+const NOTIF_ICON = { NEW_REQUEST: 'clip', OFFER_RECEIVED: 'cash', OFFER_ACCEPTED: 'phone', OFFER_REJECTED: 'user', REQUEST_CANCELLED: 'minus', JOB_DONE: 'checkMark', REVIEW_RECEIVED: 'star', ANNOUNCEMENT: 'bell', ADMIN_CANCELLED: 'minus', OFFER_COUNTERED: 'cash', OFFER_AGREED: 'phone', ARTISAN_APPROVED: 'checkMark', ARTISAN_REJECTED: 'doc', ARTISAN_SUBMITTED: 'doc' };
+const NOTIF_TONE = { NEW_REQUEST: 'lime', OFFER_RECEIVED: 'lime', OFFER_ACCEPTED: 'ok', OFFER_REJECTED: 'mute', REQUEST_CANCELLED: 'warn', JOB_DONE: 'ok', REVIEW_RECEIVED: 'warn', ANNOUNCEMENT: 'lime', ADMIN_CANCELLED: 'warn', OFFER_COUNTERED: 'lime', OFFER_AGREED: 'ok', ARTISAN_APPROVED: 'ok', ARTISAN_REJECTED: 'warn', ARTISAN_SUBMITTED: 'lime' };
 
 export function NotifItem({ n, onClick }) {
   return (

@@ -37,8 +37,10 @@ services:
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
       ADMIN_NAME: ${ADMIN_NAME:-Administrateur}
       DOWNLOADS_DIR: /data/downloads
+      UPLOADS_DIR: /data/uploads
     volumes:
       - ./downloads:/data/downloads:ro
+      - ./uploads:/data/uploads
 
 volumes:
   dbdata:

@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { api, useHash, parseRoute, useSession, setAuth, setNext, isArtisan, isAdmin, startLive, stopLive, loadConfig } from './session';
+import { api, useHash, parseRoute, useSession, setAuth, setNext, isArtisan, isAdmin, artisanReady, refreshMe, startLive, stopLive, loadConfig } from './session';
 import { Toast, Loader } from './ui';
 import Home from './views/Home';
 import Explore from './views/Explore';
@@ -11,11 +11,15 @@ import Me from './views/Me';
 import Login from './views/Login';
 import Notifications from './views/Notifications';
 import Admin from './views/Admin';
+import Onboarding from './views/Onboarding';
 
-const VIEWS = { home: Home, explore: Explore, artisan: Artisan, new: NewRequest, requests: Requests, jobs: Jobs, me: Me, login: Login, notifications: Notifications, admin: Admin };
+const VIEWS = { home: Home, explore: Explore, artisan: Artisan, new: NewRequest, requests: Requests, jobs: Jobs, me: Me, login: Login, notifications: Notifications, admin: Admin, onboarding: Onboarding };
 
 function guard(name, token, user) {
   if ((name === 'new' || name === 'requests' || name === 'jobs' || name === 'notifications') && !token) { setNext(location.hash || '#/'); return '#/login'; }
+  if (name === 'onboarding' && !token) { setNext('#/onboarding'); return '#/login'; }
+  if (name === 'onboarding' && user && !isArtisan()) return '#/';
+  if (name === 'jobs' && user && isArtisan() && !artisanReady()) return '#/onboarding';
   if (name === 'admin' && !token) { setNext(location.hash || '#/admin'); return '#/login'; }
   if (name === 'admin' && user && !isAdmin()) return '#/';
   if ((name === 'new' || name === 'requests' || name === 'jobs') && isAdmin()) return '#/admin';
@@ -32,7 +36,7 @@ export default function App() {
   const redirect = guard(name, token, user);
 
   useEffect(() => { if (redirect) location.replace(redirect); }, [redirect]);
-  useEffect(() => { loadConfig(); }, []);
+  useEffect(() => { loadConfig(); refreshMe(); }, []);
   useEffect(() => { window.scrollTo(0, 0); }, [name, r.id]);
   // Live notifications: one open connection while logged in.
   useEffect(() => {

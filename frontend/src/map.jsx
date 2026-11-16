@@ -22,14 +22,18 @@ function makeMap(el, center, zoom, interactive) {
 }
 
 // Small read-only map. approx = draws a circle instead of a pin (place hidden until the offer is accepted).
-export function MapPreview({ lat, lng, approx = false, height = 150 }) {
+export function MapPreview({ lat, lng, approx = false, height = 150, radiusKm = null }) {
   const ref = useRef(null);
   useEffect(() => {
     const map = makeMap(ref.current, { lat, lng }, approx ? 14 : 16, false);
     if (approx) L.circle([lat, lng], { radius: 700, color: '#0E2B22', weight: 1.5, fillColor: '#CDEE3B', fillOpacity: 0.35 }).addTo(map);
     else L.marker([lat, lng], { icon: L.divIcon({ className: 'pin-ic', html: '<span></span>', iconSize: [28, 38], iconAnchor: [14, 36] }) }).addTo(map);
+    if (radiusKm) {
+      const c = L.circle([lat, lng], { radius: radiusKm * 1000, color: '#0E2B22', weight: 1.5, fillColor: '#CDEE3B', fillOpacity: 0.2 }).addTo(map);
+      map.fitBounds(c.getBounds(), { padding: [8, 8] });
+    }
     return () => map.remove();
-  }, [lat, lng, approx]);
+  }, [lat, lng, approx, radiusKm]);
   return <div ref={ref} className="mapbox" style={{ height }} dir="ltr" />;
 }
 
