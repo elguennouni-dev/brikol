@@ -54,7 +54,9 @@ public final class Dto {
 
     /** artisanStatus: DRAFT, PENDING, APPROVED or REJECTED for artisans, null otherwise. */
     public record UserDto(Long id, String phone, String fullName, Role role, String city, Long artisanId,
-                          String artisanStatus) {
+                          String artisanStatus,
+                          /** administration: owner of the platform, and staff permissions */
+                          boolean superAdmin, List<String> permissions) {
     }
 
     public record AuthResponse(String token, UserDto user) {

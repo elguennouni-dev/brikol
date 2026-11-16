@@ -21,9 +21,11 @@ public class ReportController {
     }
 
     private final ReportService reports;
+    private final ma.sanai3i.security.StaffAccess access;
 
-    public ReportController(ReportService reports) {
+    public ReportController(ReportService reports, ma.sanai3i.security.StaffAccess access) {
         this.reports = reports;
+        this.access = access;
     }
 
     @PostMapping("/api/reports")
@@ -33,13 +35,15 @@ public class ReportController {
     }
 
     @GetMapping("/api/admin/reports")
-    public List<ReportService.ReportRow> list(@RequestParam(required = false) String status) {
+    public List<ReportService.ReportRow> list(@AuthenticationPrincipal AuthUser me, @RequestParam(required = false) String status) {
+        access.require(me, ma.sanai3i.domain.Permission.REPORTS);
         return reports.list(status);
     }
 
     @PostMapping("/api/admin/reports/{id}")
     public ReportService.ReportRow handle(@AuthenticationPrincipal AuthUser me, @PathVariable Long id,
                                           @RequestBody HandleInput in) {
+        access.require(me, ma.sanai3i.domain.Permission.REPORTS);
         return reports.handle(me, id, in.status(), in.resolution());
     }
 }

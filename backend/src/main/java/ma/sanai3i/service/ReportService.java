@@ -95,7 +95,8 @@ public class ReportService {
         User reporter = users.findById(me.userId()).orElse(null);
         audit.logUser(reporter, "REPORT_CREATED", type, targetId, reason);
         for (User admin : users.findAll()) {
-            if (admin.role == Role.ADMIN && !admin.blocked) {
+            if (admin.role == Role.ADMIN && !admin.blocked
+                    && (admin.superAdmin || admin.permissionSet().contains(ma.sanai3i.domain.Permission.REPORTS))) {
                 notifications.notify(admin.id, "REPORT_CREATED", null, null, null, reason);
             }
         }

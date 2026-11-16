@@ -26,9 +26,11 @@ import java.util.concurrent.TimeUnit;
 @RestController
 public class MediaController {
     private final MediaService media;
+    private final ma.sanai3i.security.StaffAccess access;
 
-    public MediaController(MediaService media) {
+    public MediaController(MediaService media, ma.sanai3i.security.StaffAccess access) {
         this.media = media;
+        this.access = access;
     }
 
     /** multipart/form-data: file + purpose (REQUEST, AVATAR, PORTFOLIO, ID_FRONT, ID_BACK). */
@@ -53,7 +55,7 @@ public class MediaController {
     @GetMapping("/api/media/{id}")
     public ResponseEntity<Resource> privateFile(@AuthenticationPrincipal AuthUser me, @PathVariable String id) {
         Media m = media.find(id);
-        if (!m.ownerId.equals(me.userId()) && me.role() != Role.ADMIN) {
+        if (!m.ownerId.equals(me.userId()) && !(me.role() == Role.ADMIN && access.has(me, ma.sanai3i.domain.Permission.FILES))) {
             throw new ApiException(HttpStatus.NOT_FOUND, "NOT_FOUND");
         }
         return file(m, CacheControl.noStore());

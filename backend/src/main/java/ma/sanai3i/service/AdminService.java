@@ -204,6 +204,7 @@ public class AdminService {
 
     public UserRow unblock(AuthUser admin, Long id) {
         User u = findUser(id);
+        guardTarget(admin, u);
         u.blocked = false;
         u.blockedReason = null;
         blockList.unblock(u.id);
@@ -222,21 +223,6 @@ public class AdminService {
         u.passwordHash = encoder.encode(sb.toString());
         log(admin, "PASSWORD_RESET", "USER", u.id, u.fullName);
         return sb.toString();
-    }
-
-    /** Only CLIENT <-> ADMIN: an artisan account has a profile and keeps its role. */
-    public UserRow setRole(AuthUser admin, Long id, Role role) {
-        User u = findUser(id);
-        if (u.id.equals(admin.userId())) {
-            throw new ApiException(HttpStatus.CONFLICT, "CANNOT_TARGET_SELF");
-        }
-        if (u.role == Role.ARTISAN || role == Role.ARTISAN) {
-            throw new ApiException(HttpStatus.CONFLICT, "ARTISAN_ROLE_LOCKED");
-        }
-        Role before = u.role;
-        u.role = role;
-        log(admin, "ROLE_CHANGED", "USER", u.id, u.fullName + " · " + before + " -> " + role);
-        return userRow(u);
     }
 
     public UserRow verify(AuthUser admin, Long artisanId, boolean verified) {

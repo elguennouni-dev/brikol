@@ -19,10 +19,12 @@ import java.util.List;
 public class BillingController {
     private final BillingService billing;
     private final ArtisanProfileRepository artisans;
+    private final ma.sanai3i.security.StaffAccess access;
 
-    public BillingController(BillingService billing, ArtisanProfileRepository artisans) {
+    public BillingController(BillingService billing, ArtisanProfileRepository artisans, ma.sanai3i.security.StaffAccess access) {
         this.billing = billing;
         this.artisans = artisans;
+        this.access = access;
     }
 
     @GetMapping("/api/artisan/me/plan")
@@ -31,28 +33,33 @@ public class BillingController {
     }
 
     @GetMapping("/api/admin/artisans/{id}/plan")
-    public BillingService.Plan plan(@PathVariable Long id) {
+    public BillingService.Plan plan(@AuthenticationPrincipal AuthUser me, @PathVariable Long id) {
+        access.require(me, ma.sanai3i.domain.Permission.BILLING);
         return billing.plan(artisans.findById(id).orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "ARTISAN_NOT_FOUND")));
     }
 
     @PostMapping("/api/admin/artisans/{id}/payments")
     public BillingService.Plan record(@AuthenticationPrincipal AuthUser me, @PathVariable Long id,
                                       @RequestBody BillingService.PaymentInput in) {
+        access.require(me, ma.sanai3i.domain.Permission.BILLING);
         return billing.record(me, id, in);
     }
 
     @GetMapping("/api/admin/payments")
-    public List<BillingService.PaymentRow> payments() {
+    public List<BillingService.PaymentRow> payments(@AuthenticationPrincipal AuthUser me) {
+        access.require(me, ma.sanai3i.domain.Permission.BILLING);
         return billing.recent();
     }
 
     @GetMapping("/api/admin/monetization")
-    public BillingService.Monetization monetization() {
+    public BillingService.Monetization monetization(@AuthenticationPrincipal AuthUser me) {
+        access.require(me, ma.sanai3i.domain.Permission.BILLING);
         return billing.monetization();
     }
 
     @PutMapping("/api/admin/monetization")
     public BillingService.Monetization update(@AuthenticationPrincipal AuthUser me, @RequestBody BillingService.Monetization in) {
+        access.require(me, ma.sanai3i.domain.Permission.BILLING);
         return billing.updateMonetization(me, in);
     }
 }

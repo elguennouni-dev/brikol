@@ -44,6 +44,7 @@ public class AdminBootstrap implements ApplicationRunner {
     @Transactional
     public void run(ApplicationArguments args) {
         if (phone.isBlank() || password.isBlank()) {
+            ownerFallback();
             return;
         }
         String normalized;
@@ -53,7 +54,14 @@ public class AdminBootstrap implements ApplicationRunner {
             log.warn("ADMIN_PHONE is not a valid Moroccan number, no administrator created");
             return;
         }
-        if (users.existsByPhone(normalized)) {
+        User existing = users.findByPhone(normalized).orElse(null);
+        if (existing != null) {
+            // the number in ADMIN_PHONE is the owner of the platform
+            if (existing.role != Role.ADMIN || !existing.superAdmin) {
+                existing.role = Role.ADMIN;
+                existing.superAdmin = true;
+                log.info("{} is the owner (super admin)", normalized);
+            }
             return;
         }
         User admin = new User();
@@ -61,8 +69,18 @@ public class AdminBootstrap implements ApplicationRunner {
         admin.passwordHash = encoder.encode(password);
         admin.fullName = name;
         admin.role = Role.ADMIN;
+        admin.superAdmin = true;
         admin.city = "Casablanca";
         users.save(admin);
         log.info("Administrator account created for {}", normalized);
+    }
+
+    /** Without ADMIN_PHONE: the oldest administrator becomes the owner, so the team can always be managed. */
+    private void ownerFallback() {
+        boolean hasOwner = users.findAll().stream().anyMatch(u -> u.role == Role.ADMIN && u.superAdmin);
+        if (!hasOwner) {
+            users.findAll().stream().filter(u -> u.role == Role.ADMIN).min(java.util.Comparator.comparing(u -> u.id))
+                    .ifPresent(u -> u.superAdmin = true);
+        }
     }
 }

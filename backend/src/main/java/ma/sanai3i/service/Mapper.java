@@ -83,7 +83,11 @@ public class Mapper {
 
     public UserDto user(User u, ArtisanProfile profile) {
         return new UserDto(u.id, u.phone, u.fullName, u.role, u.city, profile == null ? null : profile.id,
-                profile == null ? null : profile.status.name());
+                profile == null ? null : profile.status.name(),
+                u.superAdmin, u.role == ma.sanai3i.domain.Role.ADMIN
+                        ? (u.superAdmin ? java.util.Arrays.stream(ma.sanai3i.domain.Permission.values()).map(Enum::name).toList()
+                        : u.permissionSet().stream().map(Enum::name).toList())
+                        : List.of());
     }
 
     public ArtisanSummary summary(ArtisanProfile a, Rating r) {

@@ -217,7 +217,8 @@ public class ArtisanService {
         a.rejectionReason = null;
         audit.logUser(a.user, "ARTISAN_SUBMITTED", "ARTISAN", a.id, a.category.code);
         for (User admin : users.findAll()) {
-            if (admin.role == Role.ADMIN && !admin.blocked) {
+            if (admin.role == Role.ADMIN && !admin.blocked
+                    && (admin.superAdmin || admin.permissionSet().contains(ma.sanai3i.domain.Permission.FILES))) {
                 notifications.notify(admin.id, "ARTISAN_SUBMITTED", null, a.nameAr, a.nameFr, a.category.code);
             }
         }

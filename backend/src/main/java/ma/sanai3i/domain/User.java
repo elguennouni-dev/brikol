@@ -56,6 +56,28 @@ public class User {
     @Column(name = "google_sub", length = 64)
     public String googleSub;
 
+    /** The owner of the platform (ADMIN_PHONE): every permission, manages the team, cannot be changed by others. */
+    @Column(name = "super_admin", nullable = false)
+    public boolean superAdmin;
+
+    /** Staff permissions, comma separated (see Permission). */
+    @Column(length = 300)
+    public String permissions;
+
+    public java.util.Set<Permission> permissionSet() {
+        java.util.Set<Permission> out = java.util.EnumSet.noneOf(Permission.class);
+        if (permissions != null) {
+            for (String p : permissions.split(",")) {
+                try {
+                    out.add(Permission.valueOf(p.trim()));
+                } catch (IllegalArgumentException e) {
+                    // unknown permission name: ignored
+                }
+            }
+        }
+        return out;
+    }
+
     @Column(name = "phone_verified", nullable = false)
     public boolean phoneVerified;
 
