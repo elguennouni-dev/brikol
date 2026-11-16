@@ -40,7 +40,7 @@ fi
 mkdir -p "$SAFE_DIR" && chmod 700 "$SAFE_DIR" && cp .env "$SAFE" && chmod 600 "$SAFE"
 docker compose -f docker-compose.prod.yml --env-file .env up -d --build
 echo
-echo "Waiting for the app..."
+echo "Waiting for the app (can take 1-2 minutes, do not press Ctrl+C)..."
 for i in $(seq 1 60); do
   if curl -fs http://127.0.0.1:8080/api/categories >/dev/null; then
     echo "OK: backend is up"
@@ -49,8 +49,10 @@ for i in $(seq 1 60); do
     echo "Admin password: $(grep '^ADMIN_PASSWORD=' .env | cut -d= -f2)"
     exit 0
   fi
+  printf '.'
   sleep 3
 done
+echo
 echo "App did not answer in time. Logs:"; docker compose -f docker-compose.prod.yml logs --tail=80 app
 if docker compose -f docker-compose.prod.yml logs app 2>/dev/null | grep -q "Access denied for user"; then
   echo
