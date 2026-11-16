@@ -36,6 +36,8 @@ public class AuditService {
         }
     }
 
+    // Its own annotation: calling log() from here does not go through the Spring proxy.
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void logUser(User actor, String action, String targetType, Long targetId, String detail) {
         log(actor == null ? null : actor.id, actor == null ? null : actor.fullName, action, targetType, targetId, detail);
     }

@@ -71,7 +71,8 @@ public class CatalogService {
     }
 
     private static String haystack(ArtisanProfile a) {
-        return Stream.of(a.nameAr, a.nameFr, a.tradeAr, a.tradeFr, a.neighborhoodAr, a.neighborhoodFr)
+        return Stream.of(a.nameAr, a.nameFr, a.tradeAr, a.tradeFr, a.neighborhoodAr, a.neighborhoodFr,
+                        a.category == null ? null : a.category.nameAr, a.category == null ? null : a.category.nameFr, a.bioAr, a.bioFr)
                 .filter(s -> s != null)
                 .collect(Collectors.joining(" "))
                 .toLowerCase(Locale.ROOT);
