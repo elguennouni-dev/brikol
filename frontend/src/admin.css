@@ -139,3 +139,7 @@ input[type=range]{width:100%;accent-color:#0E2B22}
 .warn-card{background:#FFF1EF;border-color:#F3C9C4}
 .input.otp{font-size:24px;letter-spacing:8px;text-align:center;font-weight:800}
 .link[disabled]{opacity:.5}
+.permgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:8px}
+.perm{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border-radius:14px;border:1px solid var(--line);background:#fff;cursor:pointer;font-size:13.5px}
+.perm.on{border-color:var(--ink);background:var(--lime-tint)}
+.perm input{margin-top:3px;accent-color:#0E2B22}

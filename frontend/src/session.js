@@ -34,6 +34,9 @@ export function setAuth(token, u) {
   emit();
 }
 export const isAdmin = () => !!snap.user && snap.user.role === 'ADMIN';
+/** Administration: the owner can do everything; staff only what their permissions allow. */
+export const isOwner = () => isAdmin() && !!snap.user.superAdmin;
+export const can = (p) => isAdmin() && (!!snap.user.superAdmin || (snap.user.permissions || []).includes(p));
 export const isArtisan = () => !!snap.user && snap.user.role === 'ARTISAN';
 /** An artisan works on the platform only once an admin approved his file. */
 export const artisanReady = () => isArtisan() && snap.user.artisanStatus === 'APPROVED';

@@ -139,6 +139,12 @@ Public servers used: `tile.openstreetmap.org` and `photon.komoot.io` (fair use, 
 - The built web app (`backend/src/main/resources/static/app`) is committed, so the server does not need Node. After changing `frontend/`, run `npm run build` before committing.
 
 ## Administration
+**Team**: the account in `ADMIN_PHONE` is the owner (super admin, every right, cannot be changed by anyone). Only the owner
+manages the team (Admin > Équipe, `/api/admin/staff`): creates staff accounts (name, phone, password) with permissions
+`FILES, USERS, REQUESTS, REPORTS, CATEGORIES, BILLING, BROADCAST, SETTINGS, AUDIT`, edits them, suspends, resets the password,
+takes an account out of the team (back to a client account) or deletes it. Nobody can promote an existing user to admin.
+Permissions are checked on every administration call; staff only see the tabs they may use.
+
 Roles: `CLIENT`, `ARTISAN`, `ADMIN`. The admin can never be created from the public sign-up form.
 The first admin is created at start-up from `ADMIN_PHONE` / `ADMIN_PASSWORD` / `ADMIN_NAME` (dev profile: `0699000000` / `admin12345`;
 on the server `deploy.sh` generates them in `deploy/.env` and prints them). Panel: `/app/#/admin`.

@@ -1,6 +1,15 @@
 /* Administration texts (merged into T by i18n.js). */
 export const A = {
   ar: {
+    a_team: 'الفريق', a_teamIntro: 'حسابات الإدارة. غير نتا (المالك) اللي كتصاوبهم وكتعطيهم الصلاحيات. ما يمكنش ترد شي مستخدم عادي أدمين.',
+    a_newStaff: 'زيد موظف', a_staffPassword: 'كلمة السر (8 حروف على الأقل)', a_create: 'صاوب الحساب', a_owner: 'المالك', a_ownerNote: 'عندو كاع الصلاحيات وما يمكنش يتبدل.',
+    a_suspend: 'وقف الحساب', a_demote: 'خرجو من الفريق', a_noPermission: 'ما عندكش الصلاحية لهاد الصفحة.',
+    perm_FILES: 'ملفات الحرفيين', permd_FILES: 'التحقق من الهوية، التفعيل والرفض', perm_USERS: 'المستخدمين', permd_USERS: 'الحظر، كلمة السر، التصدير',
+    perm_REQUESTS: 'الطلبات والتقييمات', permd_REQUESTS: 'إلغاء طلب، مسح تقييم', perm_REPORTS: 'البلاغات', permd_REPORTS: 'معالجة البلاغات',
+    perm_CATEGORIES: 'الحرف والأثمنة', permd_CATEGORIES: 'زيادة الحرف وحدود الثمن', perm_BILLING: 'الاشتراكات', permd_BILLING: 'تسجيل الخلاص وإعدادات الربح',
+    perm_BROADCAST: 'الإعلانات', permd_BROADCAST: 'صيفط رسالة للمستخدمين', perm_SETTINGS: 'الإعدادات', permd_SETTINGS: 'التسجيل، البانر، السيستم',
+    perm_AUDIT: 'سجل التتبع', permd_AUDIT: 'شوف كاع العمليات',
+    err_NO_PERMISSION: 'ما عندكش الصلاحية.', err_OWNER_ONLY: 'غير المالك اللي يقدر.', err_CANNOT_TARGET_OWNER: 'المالك ما يمكنش يتبدل.', err_USER_HAS_DATA: 'هاد الحساب عندو طلبات: خرجو من الفريق بلاصة ما تمسحو.',
     otpLabel: 'الكود اللي توصلتي بيه', otpSent: 'صيفطنا كود ف SMS لـ {p}', otpResend: 'عاود صيفط الكود', otpResendIn: 'تقدر تعاود الإرسال من بعد {n} ث', otpSend: 'صيفط ليا الكود',
     forgot: 'نسيتي كلمة السر؟', resetTitle: 'كلمة سر جديدة', resetSub: 'غادي نصيفطو ليك كود ف SMS.', resetUnavailable: 'هاد الخدمة مازال ما متوفراش. تواصل مع الإدارة.', newPassword: 'كلمة السر الجديدة', resetDo: 'بدل كلمة السر',
     pushEnable: 'شعل الإشعارات فهاد الجهاز', pushOn: 'الإشعارات تشعلات ✓', pushDenied: 'ما سمحتيش بالإشعارات. تقدر تشعلها من إعدادات المتصفح.',
@@ -93,6 +102,15 @@ export const A = {
     err_FORBIDDEN: 'ما عندكش الحق.'
   },
   fr: {
+    a_team: 'Équipe', a_teamIntro: 'Comptes de l’administration. Seul le propriétaire (vous) les crée et choisit leurs droits. Un utilisateur normal ne peut pas devenir admin.',
+    a_newStaff: 'Ajouter un membre', a_staffPassword: 'Mot de passe (8 caractères minimum)', a_create: 'Créer le compte', a_owner: 'Propriétaire', a_ownerNote: 'Tous les droits, ne peut pas être modifié.',
+    a_suspend: 'Suspendre', a_demote: 'Retirer de l’équipe', a_noPermission: 'Vous n’avez pas le droit d’ouvrir cette page.',
+    perm_FILES: 'Dossiers artisans', permd_FILES: 'Vérification d’identité, activation, refus', perm_USERS: 'Utilisateurs', permd_USERS: 'Blocage, mot de passe, export',
+    perm_REQUESTS: 'Demandes et avis', permd_REQUESTS: 'Annuler une demande, supprimer un avis', perm_REPORTS: 'Signalements', permd_REPORTS: 'Traiter les signalements',
+    perm_CATEGORIES: 'Métiers et prix', permd_CATEGORIES: 'Métiers et bornes de prix', perm_BILLING: 'Abonnements', permd_BILLING: 'Paiements et réglages des revenus',
+    perm_BROADCAST: 'Annonces', permd_BROADCAST: 'Message à tous les utilisateurs', perm_SETTINGS: 'Réglages', permd_SETTINGS: 'Inscriptions, bandeau, système',
+    perm_AUDIT: 'Journal', permd_AUDIT: 'Voir toutes les actions',
+    err_NO_PERMISSION: 'Vous n’avez pas ce droit.', err_OWNER_ONLY: 'Réservé au propriétaire.', err_CANNOT_TARGET_OWNER: 'Le propriétaire ne peut pas être modifié.', err_USER_HAS_DATA: 'Ce compte a des demandes : retirez-le de l’équipe au lieu de le supprimer.',
     otpLabel: 'Code reçu', otpSent: 'Code envoyé par SMS au {p}', otpResend: 'Renvoyer le code', otpResendIn: 'Renvoyer dans {n} s', otpSend: 'Recevoir le code',
     forgot: 'Mot de passe oublié ?', resetTitle: 'Nouveau mot de passe', resetSub: 'Nous vous envoyons un code par SMS.', resetUnavailable: 'Service pas encore disponible. Contactez l’administration.', newPassword: 'Nouveau mot de passe', resetDo: 'Changer le mot de passe',
     pushEnable: 'Activer les notifications sur cet appareil', pushOn: 'Notifications activées ✓', pushDenied: 'Notifications refusées. Activez-les dans les réglages du navigateur.',

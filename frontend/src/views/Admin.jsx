@@ -1,10 +1,15 @@
 import { useState } from 'react';
-import { api, useAsync, useSession, isAdmin, guarded, toast, t, L, fmt, ago, getSession } from '../session';
+import { api, useAsync, useSession, isAdmin, isOwner, can, guarded, toast, t, L, fmt, ago, getSession } from '../session';
 import { RequestPlace, MapPreview } from '../places';
 import { MediaGallery, PrivateImg, Lightbox } from '../media';
 import { Screen, Icon, Gate, Skeleton, Empty, BackButton } from '../ui';
 
-const SECTIONS = [['', 'a_dash'], ['files', 'a_files'], ['reports', 'a_reports'], ['users', 'a_users'], ['requests', 'a_requests'], ['reviews', 'a_reviews'], ['categories', 'a_cats'], ['audit', 'a_audit'], ['tools', 'a_tools']];
+// [route, label, who may open it]
+const SECTIONS = [['', 'a_dash', () => true], ['files', 'a_files', () => can('FILES')], ['reports', 'a_reports', () => can('REPORTS')],
+  ['users', 'a_users', () => can('USERS')], ['requests', 'a_requests', () => can('REQUESTS')], ['reviews', 'a_reviews', () => can('REQUESTS')],
+  ['categories', 'a_cats', () => can('CATEGORIES')], ['audit', 'a_audit', () => can('AUDIT')],
+  ['tools', 'a_tools', () => can('BILLING') || can('BROADCAST') || can('SETTINGS') || can('USERS') || can('REQUESTS')], ['team', 'a_team', () => isOwner()]];
+const ALLOWED = { file: 'files', user: 'users', request: 'requests' };
 const STATUS_PILL = { OPEN: 'pill-lime', ACCEPTED: 'pill-warn', DONE: 'pill-ok', CANCELLED: 'pill-mute' };
 const statusLabel = (s) => t('a_status' + s.charAt(0) + s.slice(1).toLowerCase());
 const qs = (o) => Object.entries(o).filter(([, v]) => v !== '' && v != null).map(([k, v]) => k + '=' + encodeURIComponent(v)).join('&');
@@ -65,10 +70,10 @@ function Dashboard() {
   return (
     <Gate st={st} loader={<Skeleton rows={5} />}>{(s) => (
       <>
-        {s.openReports ? (
+        {s.openReports && can('REPORTS') ? (
           <a className="note wait" href="#/admin/reports" style={{ textDecoration: 'none' }}><Icon name="flag" size={18} /><span className="grow">{t('a_openReports')}</span><b className="num">{s.openReports} ›</b></a>
         ) : null}
-        {s.pendingArtisans ? (
+        {s.pendingArtisans && can('FILES') ? (
           <a className="note wait" href="#/admin/files" style={{ textDecoration: 'none' }}><Icon name="doc" size={18} /><span className="grow">{t('a_pendingFiles')}</span><b className="num">{s.pendingArtisans} ›</b></a>
         ) : null}
         <div className="a-stats">
@@ -190,20 +195,18 @@ function UserDetail({ id }) {
                     <input className="inp" value={reason} maxLength={200} onChange={(e) => setReason(e.target.value)} placeholder={t('a_reason')} />
                   </Confirm>
                 )}
-              {u.artisanId ? <a className="btn sm ghost" href={`#/admin/file/${u.artisanId}`}><Icon name="doc" size={16} />{t('a_files')}</a> : null}
-              {u.artisanId ? (
+              {u.artisanId && can('FILES') ? <a className="btn sm ghost" href={`#/admin/file/${u.artisanId}`}><Icon name="doc" size={16} />{t('a_files')}</a> : null}
+              {u.artisanId && can('FILES') ? (
                 <button className="btn sm ghost" onClick={() => act(() => api(`/admin/artisans/${u.artisanId}/verified`, { method: 'POST', body: { verified: !u.verified } }))}>
                   <Icon name="checkMark" size={16} />{u.verified ? t('a_unverify') : t('a_verify')}
                 </button>
-              ) : (
-                <Confirm label={u.role === 'ADMIN' ? t('a_makeClient') : t('a_makeAdmin')} onYes={() => act(() => api(`/admin/users/${u.id}/role`, { method: 'POST', body: { role: u.role === 'ADMIN' ? 'CLIENT' : 'ADMIN' } }))} />
-              )}
+              ) : null}
               <Confirm label={t('a_reset')} onYes={() => guarded(async () => { const r = await api(`/admin/users/${u.id}/reset-password`, { method: 'POST' }); setTemp(r.password); })} />
               {temp ? <div className="note ok"><div className="small">{t('a_tempPass')}</div><code className="temp" dir="ltr">{temp}</code></div> : null}
             </div>
           )}
 
-          {u.artisanId ? <ArtisanPlan artisanId={u.artisanId} /> : null}
+          {u.artisanId && can('BILLING') ? <ArtisanPlan artisanId={u.artisanId} /> : null}
           {d.recentRequests.length ? (
             <div className="card col g8">
               <b>{t('a_recentReq')}</b>
@@ -558,17 +561,17 @@ function Tools() {
   const hms = (sec) => `${Math.floor(sec / 86400)}d ${Math.floor((sec % 86400) / 3600)}h ${Math.floor((sec % 3600) / 60)}m`;
   return (
     <>
-      <Monetization />
-      <form className="card col g12" onSubmit={(e) => { e.preventDefault(); guarded(async () => { const r = await api('/admin/broadcast', { method: 'POST', body: { audience: aud, message: msg } }); toast(t('a_sent', { n: r.sent })); setMsg(''); }); }}>
+      {can('BILLING') ? <Monetization /> : null}
+      {can('BROADCAST') ? <form className="card col g12" onSubmit={(e) => { e.preventDefault(); guarded(async () => { const r = await api('/admin/broadcast', { method: 'POST', body: { audience: aud, message: msg } }); toast(t('a_sent', { n: r.sent })); setMsg(''); }); }}>
         <b>{t('a_broadcast')}</b>
         <select className="inp" value={aud} onChange={(e) => setAud(e.target.value)} aria-label={t('a_audience')}>
           <option value="ALL">{t('a_aAll')}</option><option value="CLIENTS">{t('a_aClients')}</option><option value="ARTISANS">{t('a_aArtisans')}</option>
         </select>
         <textarea className="inp" rows={3} maxLength={160} value={msg} onChange={(e) => setMsg(e.target.value)} placeholder={t('a_message')} required />
         <button className="btn sm" type="submit" disabled={!msg.trim()} style={{ alignSelf: 'flex-start' }}>{t('a_send')}</button>
-      </form>
+      </form> : null}
 
-      {s ? (
+      {s && can('SETTINGS') ? (
         <form className="card col g12" onSubmit={(e) => { e.preventDefault(); guarded(async () => { const r = await api('/admin/settings', { method: 'PUT', body: { registrationsOpen: s.registrationsOpen, bannerMessage: s.bannerMessage || '' } }); setEdit(null); settings.reload(); toast(t('a_done')); return r; }); }}>
           <b>{t('a_settings')}</b>
           <label className="row between g12"><span>{t('a_regOpen')}</span><input type="checkbox" checked={s.registrationsOpen} onChange={(e) => setEdit({ ...s, registrationsOpen: e.target.checked })} style={{ width: 22, height: 22, accentColor: '#0E2B22' }} /></label>
@@ -578,7 +581,7 @@ function Tools() {
         </form>
       ) : null}
 
-      {sys.data ? (
+      {sys.data && can('SETTINGS') ? (
         <div className="card col g8">
           <b>{t('a_system')}</b>
           <div className="kvs">
@@ -592,13 +595,15 @@ function Tools() {
         </div>
       ) : null}
 
-      <div className="card col g8">
-        <b>{t('a_export')}</b>
-        <div className="row g8 wrap">
-          <button className="btn sm ghost" onClick={() => guarded(() => download('/admin/export/users.csv', 'users.csv'))}>{t('a_exportUsers')}</button>
-          <button className="btn sm ghost" onClick={() => guarded(() => download('/admin/export/requests.csv', 'requests.csv'))}>{t('a_exportReq')}</button>
+      {can('USERS') || can('REQUESTS') ? (
+        <div className="card col g8">
+          <b>{t('a_export')}</b>
+          <div className="row g8 wrap">
+            {can('USERS') ? <button className="btn sm ghost" onClick={() => guarded(() => download('/admin/export/users.csv', 'users.csv'))}>{t('a_exportUsers')}</button> : null}
+            {can('REQUESTS') ? <button className="btn sm ghost" onClick={() => guarded(() => download('/admin/export/requests.csv', 'requests.csv'))}>{t('a_exportReq')}</button> : null}
+          </div>
         </div>
-      </div>
+      ) : null}
     </>
   );
 }
@@ -702,6 +707,89 @@ function FileDetail({ id }) {
   );
 }
 
+// ------------------------------------------------------------ team (owner only)
+const PERMS = ['FILES', 'USERS', 'REQUESTS', 'REPORTS', 'CATEGORIES', 'BILLING', 'BROADCAST', 'SETTINGS', 'AUDIT'];
+
+function PermPicker({ value, onChange }) {
+  const toggle = (p) => onChange(value.includes(p) ? value.filter((x) => x !== p) : [...value, p]);
+  return (
+    <div className="permgrid">
+      {PERMS.map((p) => (
+        <label key={p} className={`perm ${value.includes(p) ? 'on' : ''}`}>
+          <input type="checkbox" checked={value.includes(p)} onChange={() => toggle(p)} />
+          <span className="col" style={{ gap: 0 }}><b>{t('perm_' + p)}</b><small className="muted">{t('permd_' + p)}</small></span>
+        </label>
+      ))}
+    </div>
+  );
+}
+
+function StaffCard({ s, reload }) {
+  const [perms, setPerms] = useState(s.permissions);
+  const [temp, setTemp] = useState(null);
+  const changed = perms.slice().sort().join() !== s.permissions.slice().sort().join();
+  const act = (path, opts) => guarded(async () => { const r = await api('/admin/staff/' + s.id + path, opts || { method: 'POST' }); toast(t('a_done')); reload(); return r; });
+  return (
+    <div className="card col g10">
+      <div className="row between g8 wrap">
+        <span className="col" style={{ gap: 0 }}><b>{s.fullName}</b><span className="muted xs" dir="ltr" style={{ textAlign: 'start' }}>{s.phone}</span></span>
+        <span className="row g6">
+          {s.owner ? <span className="pill pill-lime">{t('a_owner')}</span> : null}
+          {s.blocked ? <span className="pill pill-warn">{t('a_blockedS')}</span> : null}
+          <span className="muted xs">{t('a_lastLogin')}: {s.lastLoginAt ? when(s.lastLoginAt) : t('a_never')}</span>
+        </span>
+      </div>
+      {s.owner ? <span className="muted small">{t('a_ownerNote')}</span> : (
+        <>
+          <PermPicker value={perms} onChange={setPerms} />
+          <div className="row g8 wrap">
+            <button className="btn sm" disabled={!changed} onClick={() => act('', { method: 'PUT', body: { permissions: perms } })}>{t('a_save')}</button>
+            <button className="btn sm ghost" onClick={() => act(s.blocked ? '/unblock' : '/block')}>{s.blocked ? t('a_unblock') : t('a_suspend')}</button>
+            <Confirm label={t('a_reset')} onYes={() => guarded(async () => { const r = await api('/admin/staff/' + s.id + '/reset-password', { method: 'POST' }); setTemp(r.password); })} />
+            <Confirm label={t('a_demote')} onYes={() => act('/demote')} />
+            <Confirm label={t('a_delete')} danger onYes={() => act('', { method: 'DELETE' })} />
+          </div>
+          {temp ? <div className="note ok"><div className="small">{t('a_tempPass')}</div><code className="temp" dir="ltr">{temp}</code></div> : null}
+        </>
+      )}
+    </div>
+  );
+}
+
+function Team() {
+  const st = useAsync(() => api('/admin/staff'), []);
+  const [f, setF] = useState({ fullName: '', phone: '', password: '', permissions: ['FILES'] });
+  const [open, setOpen] = useState(false);
+  const create = (e) => {
+    e.preventDefault();
+    guarded(async () => {
+      await api('/admin/staff', { method: 'POST', body: f });
+      toast(t('a_done'));
+      setF({ fullName: '', phone: '', password: '', permissions: ['FILES'] });
+      setOpen(false);
+      st.reload();
+    });
+  };
+  return (
+    <>
+      <span className="muted small">{t('a_teamIntro')}</span>
+      {open ? (
+        <form className="card col g10" onSubmit={create}>
+          <b>{t('a_newStaff')}</b>
+          <div className="grid2c">
+            <input className="inp" required maxLength={120} placeholder={t('fullName')} value={f.fullName} onChange={(e) => setF({ ...f, fullName: e.target.value })} />
+            <input className="inp" required type="tel" dir="ltr" placeholder={t('phonePh')} value={f.phone} onChange={(e) => setF({ ...f, phone: e.target.value })} />
+          </div>
+          <input className="inp" required minLength={8} type="text" dir="ltr" placeholder={t('a_staffPassword')} value={f.password} onChange={(e) => setF({ ...f, password: e.target.value })} />
+          <PermPicker value={f.permissions} onChange={(p) => setF({ ...f, permissions: p })} />
+          <div className="row g8"><button className="btn sm" type="submit">{t('a_create')}</button><button className="btn sm ghost" type="button" onClick={() => setOpen(false)}>{t('a_cancel')}</button></div>
+        </form>
+      ) : <button className="btn sm dark" style={{ alignSelf: 'flex-start' }} onClick={() => setOpen(true)}><Icon name="plus" size={16} />{t('a_newStaff')}</button>}
+      <Gate st={st} loader={<Skeleton rows={3} />}>{(list) => <div className="col g10">{list.map((s) => <StaffCard key={s.id + ':' + s.permissions.join()} s={s} reload={st.reload} />)}</div>}</Gate>
+    </>
+  );
+}
+
 // ------------------------------------------------------------ page
 export default function Admin({ route }) {
   useSession();
@@ -720,7 +808,10 @@ export default function Admin({ route }) {
   else if (sec === 'categories') body = <Categories />;
   else if (sec === 'audit') body = <Audit />;
   else if (sec === 'tools') body = <Tools />;
+  else if (sec === 'team') body = <Team />;
   else body = <Dashboard />;
+  const sectionOk = (SECTIONS.find(([id]) => id === (ALLOWED[sec] || sec)) || SECTIONS[0])[2]();
+  if (isAdmin() && !sectionOk) body = <Empty>{t('a_noPermission')}</Empty>;
   const active = sec === 'user' ? 'users' : sec === 'request' ? 'requests' : sec === 'file' ? 'files' : sec;
   return (
     <Screen tab="admin" width="wide">
@@ -729,7 +820,7 @@ export default function Admin({ route }) {
         <h1 className="h1" style={{ fontSize: 24 }}><Icon name="shield" size={22} /> {t('a_title')}</h1>
       </div>
       <nav className="atabs" aria-label={t('a_title')}>
-        {SECTIONS.map(([id, key]) => <a key={id} href={`#/admin${id ? '/' + id : ''}`} className={active === id ? 'on' : ''}>{t(key)}</a>)}
+        {SECTIONS.filter(([, , ok]) => ok()).map(([id, key]) => <a key={id} href={`#/admin${id ? '/' + id : ''}`} className={active === id ? 'on' : ''}>{t(key)}</a>)}
       </nav>
       {body}
     </Screen>
