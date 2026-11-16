@@ -30,6 +30,15 @@ public final class Dto {
             @Size(max = 80) String neighborhood) {
     }
 
+    /** credential = ID token from Google. The other fields are only needed the first time (account creation). */
+    public record GoogleAuthRequest(
+            @NotBlank @Size(max = 4096) String credential,
+            String phone,
+            Role role,
+            String categoryCode,
+            @Size(max = 80) String neighborhood) {
+    }
+
     public record LoginRequest(@NotBlank String phone, @NotBlank String password) {
     }
 

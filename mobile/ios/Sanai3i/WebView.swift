@@ -20,6 +20,7 @@ struct WebView: UIViewRepresentable {
     func makeUIView(context: Context) -> WKWebView {
         let config = WKWebViewConfiguration()
         config.websiteDataStore = .default()          // keeps the login token and language (localStorage)
+        config.applicationNameForUserAgent = "Mobile/15E148 Sanai3iApp/iOS"   // the web app knows it runs in the app
         let web = WKWebView(frame: .zero, configuration: config)
         web.navigationDelegate = context.coordinator
         web.allowsBackForwardNavigationGestures = true

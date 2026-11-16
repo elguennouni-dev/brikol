@@ -36,6 +36,7 @@ Password `demo1234`
 | Method | Path | Notes |
 |---|---|---|
 | POST | /api/auth/register, /api/auth/login | phone + password; role CLIENT or ARTISAN |
+| POST | /api/auth/google | Google ID token (+ phone, role, trade the first time) |
 | GET | /api/me | |
 | GET | /api/categories | public |
 | GET | /api/artisans?category&q&city&availableToday | public |
@@ -54,6 +55,15 @@ Password `demo1234`
 | GET | /api/notifications/stream | live channel (Server-Sent Events, `Authorization: Bearer`) |
 
 Errors are codes (e.g. `PHONE_TAKEN`) translated by the web app.
+
+## Sign in with Google
+Web and iPhone (PWA in Safari): button "Continuer avec Google" on the login page (Google Identity Services).
+The browser gets an ID token, `POST /api/auth/google {credential}` verifies it on the server (Google's public keys, issuer,
+audience = `GOOGLE_CLIENT_ID`, expiry). Known account (same Google id, or same verified e-mail): signed in. New account:
+the server answers `428 GOOGLE_SIGNUP_NEEDED`, the app asks once for the phone number and the role (and trade for artisans),
+then calls again with them. Client ID: `app.google.client-id` / env `GOOGLE_CLIENT_ID`; in Google Cloud add the site to
+"Authorized JavaScript origins". Inside the Android/iOS app WebViews Google forbids this page, so the button is hidden there
+(the apps add `Sanai3iApp/...` to the user agent); native Google sign-in in the apps is a next step.
 
 ## Location on a live map
 When a client posts a request he picks the place on a map (Leaflet + OpenStreetMap tiles, no API key):

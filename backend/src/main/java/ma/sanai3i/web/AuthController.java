@@ -2,6 +2,7 @@ package ma.sanai3i.web;
 
 import jakarta.validation.Valid;
 import ma.sanai3i.dto.Dto.AuthResponse;
+import ma.sanai3i.dto.Dto.GoogleAuthRequest;
 import ma.sanai3i.dto.Dto.LoginRequest;
 import ma.sanai3i.dto.Dto.RegisterRequest;
 import ma.sanai3i.dto.Dto.UserDto;
@@ -29,6 +30,11 @@ public class AuthController {
     @ResponseStatus(HttpStatus.CREATED)
     public AuthResponse register(@Valid @RequestBody RegisterRequest body) {
         return auth.register(body);
+    }
+
+    @PostMapping("/auth/google")
+    public AuthResponse google(@Valid @RequestBody GoogleAuthRequest body) {
+        return auth.google(body);
     }
 
     @PostMapping("/auth/login")

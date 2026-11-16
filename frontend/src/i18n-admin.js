@@ -1,6 +1,8 @@
 /* Administration texts (merged into T by i18n.js). */
 export const A = {
   ar: {
+    gFinishTitle: 'بقات خطوة وحدة', gFinishSub: 'كمل الحساب ديالك باش تبدا.', gPhoneWhy: 'الرقم كيبان غير للي غادي تخدم معاه (الكليان ولا الصنايعي).',
+    orPhone: 'ولا بالتيليفون', err_GOOGLE_INVALID: 'الدخول بجوجل ما نجحش. عاود.', err_GOOGLE_DISABLED: 'الدخول بجوجل ما خدامش دابا.',
     mapTitle: 'اختار البلاصة', mapSearch: 'قلب على حي، زنقة، بلاصة…', mapNoResult: 'ما لقينا والو. جرب كلمة أخرى.', mapMe: 'موقعي دابا',
     mapHere: 'البلاصة ديال الخدمة', mapUnnamed: 'بلاصة بلا سمية', mapConfirm: 'أكد هاد البلاصة', mapPick: 'حدد البلاصة فالخريطة',
     mapPickHint: 'قلب، ولا خد موقعك دابا، ولا حرك الخريطة', mapChange: 'بدل', placeApprox: 'بلاصة تقريبية. العنوان كيبان ملي يتقبل العرض ديالك.',
@@ -38,6 +40,8 @@ export const A = {
     err_FORBIDDEN: 'ما عندكش الحق.'
   },
   fr: {
+    gFinishTitle: 'Plus qu’une étape', gFinishSub: 'Complétez votre compte pour commencer.', gPhoneWhy: 'Le numéro n’est montré qu’à la personne avec qui vous travaillez.',
+    orPhone: 'ou avec le téléphone', err_GOOGLE_INVALID: 'Connexion Google échouée. Réessayez.', err_GOOGLE_DISABLED: 'La connexion Google est indisponible.',
     mapTitle: 'Choisir le lieu', mapSearch: 'Quartier, rue, lieu…', mapNoResult: 'Aucun résultat. Essayez un autre mot.', mapMe: 'Ma position',
     mapHere: 'Lieu de l’intervention', mapUnnamed: 'Lieu sans nom', mapConfirm: 'Confirmer ce lieu', mapPick: 'Choisir le lieu sur la carte',
     mapPickHint: 'Cherchez, utilisez votre position ou déplacez la carte', mapChange: 'Modifier', placeApprox: 'Lieu approximatif. L’adresse s’affiche quand votre offre est acceptée.',

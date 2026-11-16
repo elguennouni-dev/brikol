@@ -1,23 +1,29 @@
 package ma.sanai3i.web;
 
-import ma.sanai3i.dto.AdminDto.SettingsDto;
 import ma.sanai3i.service.SettingsService;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-/** What every visitor needs before logging in: is sign-up open, is there a banner to show. */
+/** What every visitor needs before logging in: is sign-up open, banner, Google sign-in client. */
 @RestController
 @RequestMapping("/api/public")
 public class PublicController {
-    private final SettingsService settings;
+    public record PublicConfig(boolean registrationsOpen, String bannerMessage, String googleClientId) {
+    }
 
-    public PublicController(SettingsService settings) {
+    private final SettingsService settings;
+    private final String googleClientId;
+
+    public PublicController(SettingsService settings, @Value("${app.google.client-id:}") String googleClientId) {
         this.settings = settings;
+        this.googleClientId = googleClientId;
     }
 
     @GetMapping("/config")
-    public SettingsDto config() {
-        return new SettingsDto(settings.registrationsOpen(), settings.banner());
+    public PublicConfig config() {
+        return new PublicConfig(settings.registrationsOpen(), settings.banner(),
+                googleClientId == null || googleClientId.isBlank() ? null : googleClientId);
     }
 }

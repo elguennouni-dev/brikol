@@ -62,6 +62,8 @@ class MainActivity : ComponentActivity() {
             settings.allowContentAccess = false
             overScrollMode = View.OVER_SCROLL_NEVER
             settings.setGeolocationEnabled(true)
+            // lets the web app know it runs in the app (e.g. hide "Sign in with Google", blocked in WebViews)
+            settings.userAgentString = settings.userAgentString + " Sanai3iApp/Android"
             webViewClient = ShellClient()
             webChromeClient = object : WebChromeClient() {
                 override fun onGeolocationPermissionsShowPrompt(origin: String, callback: GeolocationPermissions.Callback) {

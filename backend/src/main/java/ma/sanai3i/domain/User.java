@@ -49,6 +49,13 @@ public class User {
     @Column(name = "blocked_reason")
     public String blockedReason;
 
+    /** Set for accounts created or linked with "Sign in with Google". */
+    @Column(length = 160)
+    public String email;
+
+    @Column(name = "google_sub", length = 64)
+    public String googleSub;
+
     @Column(name = "last_login_at")
     public Instant lastLoginAt;
 }

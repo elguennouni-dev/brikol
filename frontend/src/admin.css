@@ -43,3 +43,7 @@ a.trow:hover{background:rgba(205,238,59,.12)}
 .grid2>*,.a-stats>*{min-width:0}
 .a-bars{min-width:0;width:100%}
 .a-bar-n{max-width:100%;overflow:hidden}
+.gbtn{display:flex;justify-content:center;min-height:44px;width:100%}
+.ordiv{display:flex;align-items:center;gap:12px;color:var(--muted);font-size:13px}
+.ordiv::before,.ordiv::after{content:"";flex:1;height:1px;background:var(--line)}
+img.avatar{object-fit:cover}
