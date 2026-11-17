@@ -29,7 +29,8 @@ import java.util.Map;
 
 /**
  * Demo data for development (app.seed=true, on by default in the "dev" profile). Does nothing when users exist.
- * All demo accounts use the password "demo1234".
+ * Demo accounts get app.seed-password (set to "demo1234" in the dev profile only). Without it they get a random password
+ * nobody knows, so demo data can be shown on a public server without opening known logins.
  *   client  Amine Hasnaoui   0600000001
  *   artisan Hassan (painter) 0611000001, Omar 0611000002, Anas 0611000003 (painters), others up to 0611000009
  */
@@ -37,7 +38,7 @@ import java.util.Map;
 @ConditionalOnProperty(name = "app.seed", havingValue = "true")
 @org.springframework.core.annotation.Order(1)
 public class DemoDataSeeder implements ApplicationRunner {
-    private static final String PASSWORD = "demo1234";
+    private final String password;
 
     private final UserRepository users;
     private final CategoryRepository categories;
@@ -52,7 +53,8 @@ public class DemoDataSeeder implements ApplicationRunner {
 
     public DemoDataSeeder(UserRepository users, CategoryRepository categories, ArtisanProfileRepository artisans,
                           JobRequestRepository requests, OfferRepository offers, ReviewRepository reviews,
-                          PasswordEncoder encoder) {
+                          PasswordEncoder encoder, @org.springframework.beans.factory.annotation.Value("${app.seed-password:}") String password) {
+        this.password = password == null || password.isBlank() ? DemoPasswordGuard.randomPassword() : password;
         this.users = users;
         this.categories = categories;
         this.artisans = artisans;
@@ -69,7 +71,7 @@ public class DemoDataSeeder implements ApplicationRunner {
         if (users.count() > users.countByRole(ma.sanai3i.domain.Role.ADMIN)) {
             return;
         }
-        hash = encoder.encode(PASSWORD);
+        hash = encoder.encode(password);
         for (Category c : categories.findAll()) {
             cats.put(c.code, c);
         }

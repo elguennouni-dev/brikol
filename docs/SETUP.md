@@ -214,3 +214,22 @@ Both apps just load the web app from the server and open `tel:`, WhatsApp, mailt
 - Artisan phone numbers are public by design (simple marketplace).
 - No push notifications, no image upload, no OTP phone verification yet.
 - Not yet compiled or run in the authoring environment (Maven Central was unreachable) — run `mvn test` first.
+
+
+## Security notes
+- **Secrets**: nothing secret is in the repository. `JWT_SECRET` must be 32+ random characters; the app refuses to start
+  outside the `dev` profile with a missing, short or default secret. `deploy.sh` generates it and keeps a copy in `~/.sanai3i/`.
+  The admin password is written to `~/.sanai3i/admin-password.txt` (mode 600), never printed.
+- **Tokens**: JWT (HS256) in the `Authorization` header, so no cookies and no CSRF. Each token carries the account's
+  `token_version`: a password reset or removing a staff member (a block refuses every request with ACCOUNT_BLOCKED) signs that account out on every device.
+- **Access**: admin endpoints check the staff permission in the database on every call. Clients see an artisan's profile
+  only after receiving an offer from them, and the phone number only after accepting it. The artisan list is staff-only.
+- **Proxy / IP**: `X-Forwarded-For` is only trusted from internal proxies (Tomcat RemoteIpValve), so rate limits and the
+  audit log cannot be fooled with a fake header.
+- **Browser**: strict Content-Security-Policy (no inline scripts), `X-Frame-Options: DENY`, HSTS, Referrer-Policy and
+  Permissions-Policy. Uploaded files are checked by their first bytes and served with `nosniff` and a sandbox CSP.
+- **Demo data**: demo accounts get random passwords outside the `dev` profile (`APP_SEED_PASSWORD` to choose one).
+  Old demo accounts that still had the public password are given a random one at start-up.
+- **Container**: the app runs as an unprivileged user (uid 10001); `deploy.sh` gives it the `uploads/` and `secrets/` folders.
+- **Dependencies**: Dependabot opens weekly pull requests for Maven, npm, Gradle, Docker and GitHub Actions.
+  Spring Boot 3.5's open-source support ended in June 2026: plan the move to Spring Boot 4.

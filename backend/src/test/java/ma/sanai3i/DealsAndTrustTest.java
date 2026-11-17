@@ -114,7 +114,7 @@ class DealsAndTrustTest {
     void reportsAreHandledByAdmins() throws Exception {
         String client = login("0600000001", "demo1234");
         String admin = login("0699000000", "admin12345");
-        String list = body(get("/api/artisans").param("q", "Hassan"));
+        String list = body(get("/api/artisans").header("Authorization", login("0699000000", "admin12345")).param("q", "Hassan"));
         Number hassanId = JsonPath.read(list, "$[0].id");
         String report = "{\"targetType\":\"ARTISAN\",\"targetId\":" + hassanId + ",\"reason\":\"NO_SHOW\",\"details\":\"Pas venu au rendez-vous\"}";
         mvc.perform(post("/api/reports").header("Authorization", client).contentType(JSON).content(report)).andExpect(status().isCreated());
@@ -139,7 +139,7 @@ class DealsAndTrustTest {
         String admin = login("0699000000", "admin12345");
         String omar = login("0611000002", "demo1234");
         String client = login("0600000001", "demo1234");
-        Number omarId = JsonPath.read(body(get("/api/artisans").param("q", "Omar")), "$[0].id");
+        Number omarId = JsonPath.read(body(get("/api/artisans").header("Authorization", login("0699000000", "admin12345")).param("q", "Omar")), "$[0].id");
         try {
             mvc.perform(put("/api/admin/monetization").header("Authorization", admin).contentType(JSON)
                     .content("{\"enabled\":true,\"subscriptionPrice\":99,\"trialDays\":0,\"featuredPrice\":49,\"paymentInstructions\":\"CashPlus 0600000000\"}"))
@@ -157,7 +157,7 @@ class DealsAndTrustTest {
                     .andExpect(status().isCreated());
             mvc.perform(post("/api/admin/artisans/" + omarId + "/payments").header("Authorization", admin).contentType(JSON)
                     .content("{\"kind\":\"FEATURED\",\"months\":1,\"amount\":49,\"method\":\"virement\"}")).andExpect(jsonPath("$.featured").value(true));
-            mvc.perform(get("/api/artisans").param("category", "paint"))
+            mvc.perform(get("/api/artisans").header("Authorization", login("0699000000", "admin12345")).param("category", "paint"))
                     .andExpect(jsonPath("$[0].nameFr").value("Omar Chraibi")).andExpect(jsonPath("$[0].featured").value(true));
             mvc.perform(get("/api/admin/payments").header("Authorization", admin)).andExpect(jsonPath("$[0].artisanName").isNotEmpty());
         } finally {
@@ -168,7 +168,7 @@ class DealsAndTrustTest {
 
     @Test
     void publicPagesForSearchEngines() throws Exception {
-        Number hassanId = JsonPath.read(body(get("/api/artisans").param("q", "Hassan")), "$[0].id");
+        Number hassanId = JsonPath.read(body(get("/api/artisans").header("Authorization", login("0699000000", "admin12345")).param("q", "Hassan")), "$[0].id");
         mvc.perform(get("/artisans")).andExpect(status().isOk()).andExpect(content().string(containsString("/artisans/paint/casablanca")));
         // trade + city pages carry no artisan names
         mvc.perform(get("/artisans/paint/casablanca")).andExpect(status().isOk())

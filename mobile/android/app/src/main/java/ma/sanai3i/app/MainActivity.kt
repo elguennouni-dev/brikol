@@ -84,9 +84,12 @@ class MainActivity : ComponentActivity() {
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { /* nothing to do */ }
 
     /** Exposed to the web app as window.BrikolApp: the push token for this device. */
+    /** Host of the page shown in the WebView; the bridge answers only our own site. */
+    @Volatile private var pageHost: String? = null
+
     inner class Bridge {
         @JavascriptInterface
-        fun pushToken(): String = PushService.token(this@MainActivity)
+        fun pushToken(): String = if (pageHost == baseUri.host) PushService.token(this@MainActivity) else ""
     }
 
     private fun setupPush() {
@@ -301,6 +304,7 @@ class MainActivity : ComponentActivity() {
         }
 
         override fun onPageStarted(view: WebView, url: String?, favicon: Bitmap?) {
+            pageHost = url?.let { Uri.parse(it).host }
             offline.visibility = View.GONE
         }
 

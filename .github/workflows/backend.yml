@@ -4,6 +4,9 @@ on:
   push:
   pull_request:
   workflow_dispatch:
+# least privilege for the workflow token
+permissions:
+  contents: read
 jobs:
   test:
     runs-on: ubuntu-latest

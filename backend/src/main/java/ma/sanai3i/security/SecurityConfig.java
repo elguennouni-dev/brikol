@@ -3,6 +3,7 @@ package ma.sanai3i.security;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.config.Customizer;
@@ -23,18 +24,45 @@ import java.util.List;
 
 @Configuration
 public class SecurityConfig {
+    /**
+     * Only our own scripts (no inline JavaScript anywhere), plus Google sign-in. Styles may be inline (React style
+     * attributes). Maps: OpenStreetMap tiles and the Photon geocoder. Push: Firebase endpoints.
+     */
+    static final String CSP = String.join("; ",
+            "default-src 'self'",
+            "script-src 'self' https://accounts.google.com/gsi/client",
+            "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://accounts.google.com/gsi/style",
+            "font-src 'self' https://fonts.gstatic.com",
+            "img-src 'self' data: blob: https://tile.openstreetmap.org https://*.tile.openstreetmap.org https://*.googleusercontent.com",
+            "media-src 'self' blob:",
+            "connect-src 'self' https://photon.komoot.io https://accounts.google.com/gsi/ https://*.googleapis.com",
+            "frame-src https://accounts.google.com/gsi/",
+            "worker-src 'self'",
+            "manifest-src 'self'",
+            "object-src 'none'",
+            "base-uri 'self'",
+            "form-action 'self'",
+            "frame-ancestors 'none'");
 
     @Bean
     SecurityFilterChain filterChain(HttpSecurity http, JwtService jwtService, BlockList blockList) throws Exception {
         http
-                .csrf(csrf -> csrf.disable())          // stateless API, bearer token in a header
+                // No cookies: the token travels in the Authorization header, which a third-party site cannot add,
+                // so cross-site request forgery does not apply.
+                .csrf(csrf -> csrf.disable())
+                .headers(h -> h
+                        .contentSecurityPolicy(c -> c.policyDirectives(CSP))
+                        .frameOptions(f -> f.deny())
+                        .referrerPolicy(r -> r.policy(ReferrerPolicyHeaderWriter.ReferrerPolicy.STRICT_ORIGIN_WHEN_CROSS_ORIGIN))
+                        .httpStrictTransportSecurity(t -> t.includeSubDomains(false).maxAgeInSeconds(31_536_000))
+                        .permissionsPolicyHeader(pp -> pp.policy("camera=(self), microphone=(self), geolocation=(self), payment=(), usb=()")))
                 .cors(Customizer.withDefaults())
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .dispatcherTypeMatchers(DispatcherType.ASYNC, DispatcherType.ERROR).permitAll()   // live (SSE) responses
                         .requestMatchers("/api/auth/**", "/api/public/**").permitAll()
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.GET, "/api/categories", "/api/artisans", "/api/artisans/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/categories").permitAll()
                         .requestMatchers("/api/**").authenticated()
                         .anyRequest().permitAll())      // static web app, /error, health
                 .exceptionHandling(e -> e.authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)))

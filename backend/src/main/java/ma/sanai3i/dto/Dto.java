@@ -22,7 +22,7 @@ public final class Dto {
     // ---------- auth ----------
     public record RegisterRequest(
             @NotBlank String phone,
-            @NotBlank @Size(min = 6, max = 72) String password,
+            @NotBlank @Size(min = 8, max = 72) String password,
             @NotBlank @Size(max = 120) String fullName,
             @NotBlank @Size(max = 80) String city,
             Role role,
@@ -36,7 +36,7 @@ public final class Dto {
     }
 
     public record ResetPasswordRequest(@NotBlank String phone, @NotBlank @Size(max = 10) String otp,
-                                       @NotBlank @Size(min = 6, max = 72) String password) {
+                                       @NotBlank @Size(min = 8, max = 72) String password) {
     }
 
     /** credential = ID token from Google. The other fields are only needed the first time (account creation). */

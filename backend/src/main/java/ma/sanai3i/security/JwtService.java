@@ -7,6 +7,7 @@ import io.jsonwebtoken.security.Keys;
 import ma.sanai3i.domain.Role;
 import ma.sanai3i.domain.User;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
@@ -19,8 +20,15 @@ public class JwtService {
     private final SecretKey key;
     private final long ttlMillis;
 
+    static final String DEV_SECRET = "dev-only-secret-change-me-dev-only-secret-change-me";
+
     public JwtService(@Value("${app.jwt.secret}") String secret,
-                      @Value("${app.jwt.ttl-days}") long ttlDays) {
+                      @Value("${app.jwt.ttl-days}") long ttlDays, Environment env) {
+        boolean dev = java.util.Arrays.asList(env.getActiveProfiles()).contains("dev");
+        if (!dev && (secret == null || secret.length() < 32 || DEV_SECRET.equals(secret))) {
+            // anyone could sign tokens with the public default: never start like that in production
+            throw new IllegalStateException("JWT_SECRET must be set to a random value of at least 32 characters");
+        }
         this.key = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
         this.ttlMillis = ttlDays * 24L * 60L * 60L * 1000L;
     }
@@ -30,6 +38,7 @@ public class JwtService {
         return Jwts.builder()
                 .subject(String.valueOf(user.id))
                 .claim("role", user.role.name())
+                .claim("tv", user.tokenVersion)
                 .issuedAt(now)
                 .expiration(new Date(now.getTime() + ttlMillis))
                 .signWith(key)
@@ -41,7 +50,8 @@ public class JwtService {
             Claims claims = Jwts.parser().verifyWith(key).build().parseSignedClaims(token).getPayload();
             Long id = Long.valueOf(claims.getSubject());
             Role role = Role.valueOf(claims.get("role", String.class));
-            return Optional.of(new AuthUser(id, role));
+            Integer tv = claims.get("tv", Integer.class);
+            return Optional.of(new AuthUser(id, role, tv == null ? 0 : tv));
         } catch (JwtException | IllegalArgumentException e) {
             return Optional.empty();
         }

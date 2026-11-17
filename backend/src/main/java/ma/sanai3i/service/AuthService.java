@@ -45,11 +45,15 @@ public class AuthService {
     private final OtpService otp;
     private final RateLimiter limiter;
     private final SecureRandom random = new SecureRandom();
+    private final ma.sanai3i.security.BlockList blockList;
+    /** Compared against when the phone is unknown, so both cases take the same time (no account discovery). */
+    private String dummyHash;
 
     public AuthService(UserRepository users, CategoryRepository categories, ArtisanProfileRepository artisans,
                        PasswordEncoder encoder, JwtService jwt, Mapper mapper,
                        AuditService audit, SettingsService settings, GoogleVerifier google,
-                       OtpService otp, RateLimiter limiter) {
+                       OtpService otp, RateLimiter limiter, ma.sanai3i.security.BlockList blockList) {
+        this.blockList = blockList;
         this.google = google;
         this.otp = otp;
         this.limiter = limiter;
@@ -64,6 +68,7 @@ public class AuthService {
     }
 
     public AuthResponse register(RegisterRequest in) {
+        checkPassword(in.password());
         boolean verified = checkOtp(in.phone(), in.otp());
         User user = createAccount(in.phone(), in.fullName(), in.city(), in.role(), in.categoryCode(), in.neighborhood(),
                 encoder.encode(in.password()), null, null);
@@ -92,7 +97,9 @@ public class AuthService {
         String phone = Phones.normalize(in.phone());
         otp.verify(phone, OtpService.RESET, in.otp());
         User user = users.findByPhone(phone).orElseThrow(() -> new ApiException(HttpStatus.BAD_REQUEST, "OTP_INVALID"));
+        checkPassword(in.password());
         user.passwordHash = encoder.encode(in.password());
+        blockList.revokeTokens(user);             // whoever had the old password is signed out
         user.phoneVerified = true;
         limiter.reset("loginfail:" + phone);
         audit.logUser(user, "PASSWORD_RESET_SMS", "USER", user.id, null);
@@ -206,13 +213,30 @@ public class AuthService {
         if (limiter.count("loginfail:" + phone, 15 * 60_000L) >= 8) {
             throw new ApiException(HttpStatus.TOO_MANY_REQUESTS, "TOO_MANY_ATTEMPTS");
         }
+        if (in.password().getBytes(java.nio.charset.StandardCharsets.UTF_8).length > 72) {
+            throw new ApiException(HttpStatus.UNAUTHORIZED, "INVALID_CREDENTIALS");    // BCrypt refuses longer input
+        }
         User found = users.findByPhone(phone).orElse(null);
+        if (found == null) {
+            if (dummyHash == null) {
+                dummyHash = encoder.encode("brikol-timing-" + random.nextInt());
+            }
+            encoder.matches(in.password(), dummyHash);
+        }
         if (found == null || !encoder.matches(in.password(), found.passwordHash)) {
             limiter.record("loginfail:" + phone);
             audit.log(found == null ? null : found.id, phone, "LOGIN_FAILED", "USER", found == null ? null : found.id, null);
             throw new ApiException(HttpStatus.UNAUTHORIZED, "INVALID_CREDENTIALS");
         }
         return loginChecked(found, "LOGIN");
+    }
+
+    /** BCrypt only uses the first 72 bytes: longer passwords (Arabic letters take 2 bytes) are refused. */
+    private static void checkPassword(String password) {
+        if (password == null || password.length() < 8
+                || password.getBytes(java.nio.charset.StandardCharsets.UTF_8).length > 72) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "PASSWORD_WEAK");
+        }
     }
 
     @Transactional(readOnly = true)

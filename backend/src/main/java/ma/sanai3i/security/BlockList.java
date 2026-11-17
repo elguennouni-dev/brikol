@@ -26,6 +26,34 @@ public class BlockList {
         }
     }
 
+    private final java.util.Map<Long, Integer> versions = new ConcurrentHashMap<>();
+
+    /** False when the account no longer exists or the token was issued before a "sign out everywhere". */
+    public boolean tokenValid(Long userId, int tokenVersion) {
+        Integer v = versions.get(userId);
+        if (v == null) {
+            User u = users.findById(userId).orElse(null);
+            if (u == null) {
+                return false;
+            }
+            v = u.tokenVersion;
+            versions.put(userId, v);
+        }
+        return v == tokenVersion;
+    }
+
+    /** Signs the user out of every device (the caller saves the entity). */
+    public void revokeTokens(User u) {
+        u.tokenVersion = u.tokenVersion + 1;
+        Long id = u.id;
+        versions.remove(id);
+        ma.sanai3i.service.NotificationService.afterCommit(() -> versions.remove(id));
+    }
+
+    public void forget(Long userId) {
+        versions.remove(userId);
+    }
+
     public boolean isBlocked(Long userId) {
         return ids.contains(userId);
     }

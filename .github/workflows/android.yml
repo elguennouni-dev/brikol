@@ -3,6 +3,9 @@
 # Actions > "Android APK" > Run workflow > download the artifact "sanai3i-apk" > upload it as deploy/downloads/sanai3i.apk
 name: Android APK
 on: workflow_dispatch
+# least privilege for the workflow token
+permissions:
+  contents: read
 jobs:
   build:
     runs-on: ubuntu-latest

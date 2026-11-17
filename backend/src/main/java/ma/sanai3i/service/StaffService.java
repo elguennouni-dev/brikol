@@ -90,6 +90,9 @@ public class StaffService {
         User u = new User();
         u.phone = phone;
         u.fullName = in.fullName().trim().length() > 120 ? in.fullName().trim().substring(0, 120) : in.fullName().trim();
+        if (in.password() == null || in.password().length() < 8 || in.password().getBytes(java.nio.charset.StandardCharsets.UTF_8).length > 72) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "PASSWORD_WEAK");
+        }
         u.passwordHash = encoder.encode(in.password());
         u.role = Role.ADMIN;
         u.city = "Casablanca";
@@ -120,7 +123,7 @@ public class StaffService {
         u.blockedReason = blocked ? "staff" : null;
         if (blocked) {
             blockList.block(u.id);
-            hub.disconnect(u.id);
+                hub.disconnect(u.id);
         } else {
             blockList.unblock(u.id);
         }
@@ -136,6 +139,8 @@ public class StaffService {
             sb.append(ALPHABET.charAt(random.nextInt(ALPHABET.length())));
         }
         u.passwordHash = encoder.encode(sb.toString());
+        blockList.revokeTokens(u);
+        hub.disconnect(u.id);
         audit.logUser(owner, "STAFF_PASSWORD_RESET", "USER", u.id, u.fullName);
         return sb.toString();
     }
@@ -146,6 +151,7 @@ public class StaffService {
         User u = target(owner, id);
         u.role = Role.CLIENT;
         u.permissions = null;
+        blockList.revokeTokens(u);
         hub.disconnect(u.id);
         audit.logUser(owner, "STAFF_REMOVED", "USER", u.id, u.fullName);
     }
@@ -163,6 +169,7 @@ public class StaffService {
         hub.disconnect(u.id);
         String name = u.fullName;
         users.delete(u);
+        blockList.forget(u.id);
         audit.logUser(owner, "STAFF_DELETED", "USER", id, name);
     }
 

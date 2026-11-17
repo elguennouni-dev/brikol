@@ -56,8 +56,14 @@ public class AdminBootstrap implements ApplicationRunner {
         }
         User existing = users.findByPhone(normalized).orElse(null);
         if (existing != null) {
-            // the number in ADMIN_PHONE is the owner of the platform
-            if (existing.role != Role.ADMIN || !existing.superAdmin) {
+            // the number in ADMIN_PHONE is the owner of the platform, but only an existing staff account can become it:
+            // someone who registered that number as a client must never be promoted (their password is not ours)
+            if (existing.role != Role.ADMIN) {
+                log.warn("ADMIN_PHONE {} belongs to a non-staff account: not promoted. Use another number.", normalized);
+                ownerFallback();
+                return;
+            }
+            if (!existing.superAdmin) {
                 existing.role = Role.ADMIN;
                 existing.superAdmin = true;
                 log.info("{} is the owner (super admin)", normalized);

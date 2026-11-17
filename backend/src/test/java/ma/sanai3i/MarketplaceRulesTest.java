@@ -194,8 +194,8 @@ class MarketplaceRulesTest {
         List<Number> dist = JsonPath.read(near, "$[?(@.id == " + reqId + ")].distanceKm");
         assertEquals(1, dist.size());
         assertTrue(dist.get(0).doubleValue() < 5);
-        mvc.perform(get("/api/artisans").param("q", "Karim Plombier"))
+        mvc.perform(get("/api/artisans").header("Authorization", login("0699000000", "admin12345")).param("q", "Karim Plombier"))
                 .andExpect(jsonPath("$[*].nameFr", hasItem("Karim Plombier")));
-        mvc.perform(get("/api/artisans")).andExpect(jsonPath("$[*].nameFr", not(hasItem("Test User"))));
+        mvc.perform(get("/api/artisans").header("Authorization", login("0699000000", "admin12345"))).andExpect(jsonPath("$[*].nameFr", not(hasItem("Test User"))));
     }
 }

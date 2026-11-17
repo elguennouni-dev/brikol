@@ -87,7 +87,8 @@ class StaffTest {
 
         // out of the team: back to a normal account, no administration at all
         mvc.perform(post("/api/admin/staff/" + staffId + "/demote").header("Authorization", owner)).andExpect(status().isNoContent());
-        mvc.perform(get("/api/admin/stats").header("Authorization", staff)).andExpect(status().isForbidden());
+        // the password reset and the demotion signed the old token out
+        mvc.perform(get("/api/admin/stats").header("Authorization", staff)).andExpect(status().isUnauthorized());
         String fresh = login("0655110022", temp);
         mvc.perform(get("/api/me").header("Authorization", fresh)).andExpect(jsonPath("$.role").value("CLIENT"));
 

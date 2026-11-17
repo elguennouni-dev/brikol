@@ -4,6 +4,9 @@ on:
   push:
     paths: ["mobile/android/**", ".github/workflows/android-check.yml"]
   workflow_dispatch:
+# least privilege for the workflow token
+permissions:
+  contents: read
 jobs:
   build:
     runs-on: ubuntu-latest

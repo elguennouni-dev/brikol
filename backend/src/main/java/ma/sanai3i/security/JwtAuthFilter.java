@@ -39,6 +39,13 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                     response.getWriter().write("{\"code\":\"ACCOUNT_BLOCKED\"}");
                     return;
                 }
+                if (!blocked.tokenValid(user.userId(), user.tokenVersion())) {
+                    response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                    response.setContentType("application/json");
+                    response.setCharacterEncoding(StandardCharsets.UTF_8.name());
+                    response.getWriter().write("{\"code\":\"SESSION\"}");
+                    return;
+                }
                 UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(
                         user, null, List.of(new SimpleGrantedAuthority("ROLE_" + user.role().name())));
                 SecurityContextHolder.getContext().setAuthentication(auth);

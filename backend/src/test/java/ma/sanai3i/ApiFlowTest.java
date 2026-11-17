@@ -38,21 +38,21 @@ class ApiFlowTest {
     @Test
     void categoriesAndArtisansArePublic() throws Exception {
         mvc.perform(get("/api/categories")).andExpect(status().isOk()).andExpect(jsonPath("$", hasSize(7)));
-        mvc.perform(get("/api/artisans").param("category", "paint"))
+        mvc.perform(get("/api/artisans").header("Authorization", staff()).param("category", "paint"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(3)))
                 .andExpect(jsonPath("$[0].categoryCode").value("paint"));
-        mvc.perform(get("/api/artisans").param("q", "zellig"))
+        mvc.perform(get("/api/artisans").header("Authorization", staff()).param("q", "zellig"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(1)));
     }
 
     @Test
     void artisanDetailHasServicesAndReviews() throws Exception {
-        String list = mvc.perform(get("/api/artisans").param("q", "Hassan"))
+        String list = mvc.perform(get("/api/artisans").header("Authorization", staff()).param("q", "Hassan"))
                 .andExpect(status().isOk()).andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
         Number id = JsonPath.read(list, "$[0].id");
-        mvc.perform(get("/api/artisans/" + id.longValue()))
+        mvc.perform(get("/api/artisans/" + id.longValue()).header("Authorization", staff()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.services", hasSize(4)))
                 .andExpect(jsonPath("$.summary.reviewCount", greaterThanOrEqualTo(2)))
@@ -207,6 +207,13 @@ class ApiFlowTest {
     private ResultActions review(String token, long requestId) throws Exception {
         return mvc.perform(post("/api/requests/" + requestId + "/review").header("Authorization", "Bearer " + token)
                 .contentType(MediaType.APPLICATION_JSON).content("{\"rating\":5,\"body\":\"Très bon travail\"}"));
+    }
+
+    private String staff() throws Exception {
+        String body = mvc.perform(post("/api/auth/login").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"phone\":\"0699000000\",\"password\":\"admin12345\"}"))
+                .andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
+        return "Bearer " + JsonPath.read(body, "$.token");
     }
 
     private String login(String phone) throws Exception {

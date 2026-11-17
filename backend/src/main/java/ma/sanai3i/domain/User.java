@@ -91,4 +91,8 @@ public class User {
     public boolean suspended() {
         return suspendedUntil != null && suspendedUntil.isAfter(java.time.Instant.now());
     }
+
+    /** Part of every token: bumping it signs the account out everywhere. */
+    @Column(name = "token_version", nullable = false)
+    public int tokenVersion;
 }
