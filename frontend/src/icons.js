@@ -16,6 +16,7 @@ export const IC = {
   checkMark: 'M7.5 12.2l3 3 6-6.4',
   back: 'M15 5l-7 7 7 7',
   plus: 'M12 5v14M5 12h14',
+  check: 'M4.5 12.5l5 5L19.5 7',
   minus: 'M5 12h14',
   clock: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM12 7v5l3 2',
   cash: 'M3 7h18v10H3zM12 9.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5zM6.5 12h.01M17.5 12h.01',

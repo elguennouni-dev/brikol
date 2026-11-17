@@ -159,3 +159,37 @@ a{color:inherit;text-decoration:none;-webkit-tap-highlight-color:transparent}
 .promo b{font-size:17px}
 .promo .btn{align-self:flex-start;background:var(--ink);color:#fff;position:relative}
 .tipcard{display:flex;gap:12px;align-items:flex-start;background:#EEF8C8;color:var(--ink);border-radius:20px;padding:14px 16px}
+/* job screen: agreement, big artisan buttons, code */
+.speak{display:inline-flex;align-items:center;gap:5px;height:32px;padding:0 12px;border-radius:16px;border:1px solid var(--line);background:#fff;font-size:12.5px;font-weight:800;color:var(--green-ink)}
+.deal .dl{display:flex;justify-content:space-between;gap:12px;font-size:14.5px;padding:2px 0}
+.deal .dl span{color:var(--ink-2)}
+.deal .dl.total{border-top:1px dashed var(--line);padding-top:10px;margin-top:2px;font-size:17px}
+.deal .dl.total b{font-size:22px}
+.jsteps{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+.jsteps li{display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center;font-size:11.5px;font-weight:700;color:var(--muted);min-width:0}
+.jsteps .dot{width:30px;height:30px;border-radius:15px;display:grid;place-items:center;background:var(--mute-tint);font-size:13px;font-weight:800}
+.jsteps li.ok{color:var(--ink)}
+.jsteps li.ok .dot{background:var(--green);color:#fff}
+.item{background:#fff;border:1px solid var(--line);border-radius:18px;padding:12px 14px;display:flex;flex-direction:column;gap:10px}
+.item.ask{border-color:var(--amber);background:var(--amber-tint)}
+.item .receipt{width:72px;height:72px;object-fit:cover;border-radius:10px}
+.bigbtns{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.bigbtn{position:relative;min-height:104px;border-radius:24px;border:1.5px solid var(--line);background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;font-weight:800;font-size:16px;padding:10px 6px}
+.bigbtn.main{background:var(--lime);border-color:var(--lime)}
+.bigbtn.done{background:var(--green-tint);border-color:var(--green-tint);color:var(--green-ink)}
+.bigbtn small{position:absolute;top:8px;inset-inline-end:10px;font-size:14px}
+.bigbtn:disabled{cursor:default}
+.codepad .codebox{display:flex;justify-content:center;gap:10px}
+.codebox span{width:56px;height:64px;border-radius:16px;border:2px solid var(--line);display:grid;place-items:center;font-size:30px;font-weight:800;background:#fff}
+.codebox span.on{border-color:var(--ink)}
+.keys{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.key{height:60px;border-radius:18px;border:none;background:var(--mute-tint);font-size:26px;font-weight:800}
+.key.ok{background:var(--ink);color:var(--lime)}
+.key:disabled{opacity:.4}
+.mycode .code{font-size:46px;font-weight:800;letter-spacing:.3em;text-align:center;padding:6px 0 0}
+.mycode.hot{border:2px solid var(--lime);background:var(--lime-tint)}
+.warranty{border:1.5px solid var(--green-tint)}
+.btn.danger-b{color:var(--red);border-color:#F3D3CF}
+.btn.big{height:58px;font-size:17px}
+.input.bignum{font-size:30px;font-weight:800;text-align:center;height:66px}
+.suspended{display:flex;gap:10px;align-items:flex-start;background:#FBE3E0;color:#7A231C;border-radius:18px;padding:12px 14px;font-size:14px}

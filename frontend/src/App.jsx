@@ -12,15 +12,16 @@ import Notifications from './views/Notifications';
 import Admin from './views/Admin';
 import Onboarding from './views/Onboarding';
 import Chat from './views/Chat';
+import Job from './views/Job';
 import Plan from './views/Plan';
 import { syncPush } from './push';
 import { useConfig } from './session';
 
-const VIEWS = { home: Home, artisan: Artisan, new: NewRequest, requests: Requests, jobs: Jobs, me: Me, login: Login, notifications: Notifications, admin: Admin, onboarding: Onboarding, chat: Chat, plan: Plan };
+const VIEWS = { home: Home, artisan: Artisan, new: NewRequest, requests: Requests, jobs: Jobs, me: Me, login: Login, notifications: Notifications, admin: Admin, onboarding: Onboarding, chat: Chat, plan: Plan, job: Job };
 
 function guard(name, token, user) {
   if ((name === 'new' || name === 'requests' || name === 'jobs' || name === 'notifications') && !token) { setNext(location.hash || '#/'); return '#/login'; }
-  if ((name === 'chat' || name === 'plan') && !token) { setNext(location.hash); return '#/login'; }
+  if ((name === 'chat' || name === 'plan' || name === 'job') && !token) { setNext(location.hash); return '#/login'; }
   if (name === 'onboarding' && !token) { setNext('#/onboarding'); return '#/login'; }
   if (name === 'onboarding' && user && !isArtisan()) return '#/';
   if (name === 'jobs' && user && isArtisan() && !artisanReady()) return '#/onboarding';

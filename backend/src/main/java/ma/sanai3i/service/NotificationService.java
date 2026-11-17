@@ -20,7 +20,16 @@ public class NotificationService {
     private final NotificationHub hub;
     private final ma.sanai3i.push.PushService push;
 
-    public NotificationService(NotificationRepository repo, NotificationHub hub, ma.sanai3i.push.PushService push) {
+    private final ma.sanai3i.push.Alerts alerts;
+    /** Notifications about a job in progress open the job screen. */
+    static final java.util.Set<String> JOB_KINDS = java.util.Set.of("OFFER_ACCEPTED", "OFFER_AGREED", "ARTISAN_ARRIVED", "JOB_FINISHED",
+            "JOB_DONE", "JOB_DONE_CODE", "JOB_CLOSED", "JOB_CLOSED_ADMIN", "EXTRA_PROPOSED", "ADVANCE_DECLARED", "ITEM_ACCEPTED",
+            "ITEM_REFUSED", "WARRANTY_OPENED", "WARRANTY_FIXED", "WARRANTY_NOT_FIXED", "APPOINTMENT_REMINDER",
+            "APPOINTMENT_PROPOSED", "APPOINTMENT_CONFIRMED", "CASE_RESOLVED");
+
+    public NotificationService(NotificationRepository repo, NotificationHub hub, ma.sanai3i.push.PushService push,
+                               ma.sanai3i.push.Alerts alerts) {
+        this.alerts = alerts;
         this.repo = repo;
         this.hub = hub;
         this.push = push;
@@ -40,7 +49,8 @@ public class NotificationService {
         String name = actorFr != null ? actorFr : actorAr;
         afterCommit(() -> {
             hub.publish(userId, dto);
-            push.send(userId, kind, name, detail, "/app/#/notifications");
+            push.send(userId, kind, name, detail, requestId != null && JOB_KINDS.contains(kind) ? "/app/#/job/" + requestId : "/app/#/notifications");
+            alerts.send(userId, kind, name, detail, requestId);
         });
     }
 

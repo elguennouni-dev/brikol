@@ -54,11 +54,12 @@ public class RequestService {
     private final PricingService pricing;
     private final MediaService media;
     private final BillingService billing;
+    private final JobService jobs;
 
     public RequestService(JobRequestRepository requests, OfferRepository offers, UserRepository users,
                           CategoryRepository categories, ArtisanProfileRepository artisans,
                           ReviewRepository reviews, Mapper mapper, NotificationService notifications,
-                          AuditService audit, PricingService pricing, MediaService media, BillingService billing) {
+                          AuditService audit, PricingService pricing, MediaService media, BillingService billing, JobService jobs) {
         this.billing = billing;
         this.pricing = pricing;
         this.media = media;
@@ -71,6 +72,7 @@ public class RequestService {
         this.mapper = mapper;
         this.notifications = notifications;
         this.audit = audit;
+        this.jobs = jobs;
     }
 
     // ------------------------------------------------------------------ client side
@@ -81,6 +83,7 @@ public class RequestService {
         }
         User client = users.findById(me.userId())
                 .orElseThrow(() -> new ApiException(HttpStatus.UNAUTHORIZED, "UNKNOWN_USER"));
+        StrikeService.requireActive(client);
         Category category = categories.findByCode(in.categoryCode())
                 .orElseThrow(() -> new ApiException(HttpStatus.BAD_REQUEST, "UNKNOWN_CATEGORY"));
 
@@ -188,6 +191,8 @@ public class RequestService {
         }
         r.status = RequestStatus.ACCEPTED;
         r.acceptedOfferId = chosen.id;
+        r.doneCode = JobService.newCode();       // only the client sees it; the artisan types it to close the job
+        r.codeAttempts = 0;
         if (byArtisan) {
             notifications.notify(r.client.id, "OFFER_AGREED", r.id, chosen.artisan.nameAr, chosen.artisan.nameFr,
                     String.valueOf(chosen.price));
@@ -239,17 +244,13 @@ public class RequestService {
         return ownerView(r, mapper.allRatings());
     }
 
-    /** The client confirms the job was done. The artisan's "jobs done" counter goes up. */
+    /** The client confirms the job was done (same as the client's button on the job screen). */
     public RequestDto complete(AuthUser me, Long requestId) {
         JobRequest r = ownedRequest(me, requestId);
         if (r.status != RequestStatus.ACCEPTED) {
             throw new ApiException(HttpStatus.CONFLICT, "REQUEST_NOT_ACCEPTED");
         }
-        Offer accepted = acceptedOffer(r);
-        accepted.artisan.jobsDone = accepted.artisan.jobsDone + 1;
-        r.status = RequestStatus.DONE;
-        audit.logUser(r.client, "JOB_DONE", "REQUEST", r.id, null);
-        notifications.notify(accepted.artisan.user.id, "JOB_DONE", r.id, r.client.fullName, r.client.fullName, null);
+        jobs.confirmByClient(me, requestId);
         return ownerView(r, mapper.allRatings());
     }
 
@@ -282,6 +283,9 @@ public class RequestService {
     public List<RequestDto> openForArtisan(AuthUser me) {
         ArtisanProfile a = approvedArtisan(me);
         List<RequestDto> out = new ArrayList<>();
+        if (a.user.suspended()) {
+            return out;                           // the app shows why (suspendedUntil in /api/me)
+        }
         for (JobRequest r : requests.findByStatusAndCategoryIdOrderByCreatedAtDesc(RequestStatus.OPEN, a.category.id)) {
             if (!matches(a, r)) {
                 continue;
@@ -306,6 +310,7 @@ public class RequestService {
 
     public OfferDto offer(AuthUser me, Long requestId, CreateOffer in) {
         ArtisanProfile a = approvedArtisan(me);
+        StrikeService.requireActive(a.user);
         JobRequest r = requests.findById(requestId).orElseThrow(this::notFound);
         if (r.status != RequestStatus.OPEN) {
             throw new ApiException(HttpStatus.CONFLICT, "REQUEST_NOT_OPEN");

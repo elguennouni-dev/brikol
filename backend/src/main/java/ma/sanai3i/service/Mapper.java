@@ -87,7 +87,7 @@ public class Mapper {
                 u.superAdmin, u.role == ma.sanai3i.domain.Role.ADMIN
                         ? (u.superAdmin ? java.util.Arrays.stream(ma.sanai3i.domain.Permission.values()).map(Enum::name).toList()
                         : u.permissionSet().stream().map(Enum::name).toList())
-                        : List.of());
+                        : List.of(), u.suspended() ? u.suspendedUntil : null);
     }
 
     public ArtisanSummary summary(ArtisanProfile a, Rating r) {
@@ -160,7 +160,7 @@ public class Mapper {
                 shortName(r.client.fullName), clientPhone,
                 offerCount, r.acceptedOfferId, reviewed,
                 offers, myOffer, lat, lng, address,
-                media.findByRequestIdOrderByCreatedAtAsc(r.id).stream().map(MediaService::dto).toList(),
+                media.findByRequestIdOrderByCreatedAtAsc(r.id).stream().filter(m -> Media.REQUEST.equals(m.purpose)).map(MediaService::dto).toList(),
                 r.priceMin != null ? r.priceMin : r.category.minPrice,
                 r.priceMax != null ? r.priceMax : r.category.maxPrice,
                 distanceKm,

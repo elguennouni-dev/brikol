@@ -81,4 +81,22 @@ public class JobRequest {
 
     @Column(name = "reminder_sent", nullable = false)
     public boolean reminderSent;
+
+    /** 4 digits only the client sees; the artisan types it when the job is finished and paid. */
+    @Column(name = "done_code", length = 4)
+    public String doneCode;
+    @Column(name = "code_attempts", nullable = false)
+    public int codeAttempts;
+    /** The artisan pressed "I'm here" / "finished". */
+    @Column(name = "arrived_at")
+    public Instant arrivedAt;
+    @Column(name = "finished_at")
+    public Instant finishedAt;
+    /** When the job was closed and how: CODE (artisan typed the client's code), CLIENT (client confirmed) or ADMIN. */
+    @Column(name = "done_at")
+    public Instant doneAt;
+    @Column(name = "done_by", length = 10)
+    public String doneBy;
+    @Column(name = "warranty_until")
+    public Instant warrantyUntil;
 }

@@ -83,4 +83,12 @@ public class User {
 
     @Column(name = "last_login_at")
     public Instant lastLoginAt;
+
+    /** Too many strikes: no new requests (client) or offers (artisan) until then. */
+    @Column(name = "suspended_until")
+    public java.time.Instant suspendedUntil;
+
+    public boolean suspended() {
+        return suspendedUntil != null && suspendedUntil.isAfter(java.time.Instant.now());
+    }
 }

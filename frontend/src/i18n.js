@@ -1,4 +1,5 @@
 import { A } from './i18n-admin';
+import { J } from './i18n-job';
 /* Texts of the app in Darija (ar) and French (fr). Placeholders look like {name}. */
 export const T = {
   ar: {
@@ -130,3 +131,5 @@ export const T = {
 };
 Object.assign(T.ar, A.ar);
 Object.assign(T.fr, A.fr);
+Object.assign(T.ar, J.ar);
+Object.assign(T.fr, J.fr);

@@ -91,6 +91,30 @@ Off by default. Admin > Outils > Revenus: turn on, monthly price, free days, "fe
 Artisans pay outside the app; the admin records the payment on the user page, which extends the subscription (or featured).
 Without an active subscription an artisan can see requests but not send offers. Featured artisans are listed first.
 
+## Protecting both sides of a job (cash stays cash)
+Brikol never holds the money. Once an offer is accepted, the job screen (`#/job/{id}`, API `/api/requests/{id}/job`) keeps a
+written record that both sides confirm:
+- **Agreement**: agreed price + extras (artisan asks, client accepts) − advances (one side declares, the other confirms) = what is left to pay.
+- **Closing code**: 4 digits only the client sees. The artisan presses "finished", the client gets the code again (app, push, WhatsApp)
+  with the amount left, and gives it once paid. 5 wrong tries lock it; the client can always close the job alone.
+- **Big buttons for artisans**: "I'm here", "Extra", "Finished", a numeric pad for the code, and a "listen" button that reads the screen aloud.
+- **Photos before / after** (artisan), **7-day warranty** (client: "the problem came back" → artisan comes back for free and marks it fixed
+  → client confirms; ignored for 72 h → goes to the team).
+- **"I have a problem"** (no-show, unpaid, client absent, price, quality, behaviour): lands in Admin → Litiges with the whole file
+  (agreement, extras, advances, timeline, photos, chat, both phones). Needs the REPORTS permission.
+- **Strikes**: given by the team, or automatically when an artisan withdraws less than 24 h before a confirmed appointment.
+  3 strikes in 30 days suspend the account for 7 days (no new requests / offers). Staff can remove a strike.
+
+### WhatsApp alerts
+Important events (offer accepted, artisan arrived, job finished + code, extra asked, warranty, suspension…) can also go out by
+WhatsApp or SMS through the same Twilio account:
+```
+ALERTS_CHANNEL=whatsapp            # or sms, or none (default)
+TWILIO_WHATSAPP_FROM=+14155238886  # sandbox number, then your approved WhatsApp sender
+TWILIO_WHATSAPP_TEMPLATE=HX...     # approved "utility" template with one variable, e.g. "Brikol: {{1}}"
+```
+Without a template, WhatsApp only delivers to people who wrote to the number in the last 24 hours (fine to test with the sandbox).
+
 ## Pages for Google
 `/artisans` (index), `/artisans/{trade}/{city}` (e.g. `/artisans/paint/casablanca`: number of verified artisans, usual
 price, how it works, schema.org `Service` data; never artisan names), `/sitemap.xml`, `/robots.txt`. Old `/pro/{id}` links

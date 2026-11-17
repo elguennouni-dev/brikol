@@ -42,6 +42,10 @@ services:
       TWILIO_ACCOUNT_SID: ${TWILIO_ACCOUNT_SID:-}
       TWILIO_AUTH_TOKEN: ${TWILIO_AUTH_TOKEN:-}
       TWILIO_FROM: ${TWILIO_FROM:-}
+      # WhatsApp (or SMS) messages for important job events: ALERTS_CHANNEL=whatsapp|sms|none
+      ALERTS_CHANNEL: ${ALERTS_CHANNEL:-none}
+      TWILIO_WHATSAPP_FROM: ${TWILIO_WHATSAPP_FROM:-}
+      TWILIO_WHATSAPP_TEMPLATE: ${TWILIO_WHATSAPP_TEMPLATE:-}
       # Push (Firebase): service account file in deploy/secrets/fcm.json + web app config
       FCM_CREDENTIALS: ${FCM_CREDENTIALS:-}
       FIREBASE_API_KEY: ${FIREBASE_API_KEY:-}
