@@ -406,7 +406,7 @@ public class RequestService {
      * Distance from the artisan to the client's point rounded to 2 decimals (the same ~1 km grid the artisan is
      * shown). Using the exact point let an artisan who moves his own position triangulate the client's home.
      */
-    static Double distance(ArtisanProfile a, JobRequest r) {
+    public static Double distance(ArtisanProfile a, JobRequest r) {
         if (a.lat == null || a.lng == null || r.lat == null || r.lng == null) {
             return null;
         }

@@ -18,6 +18,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.when;
@@ -67,9 +68,13 @@ class SmsAndLimitsTest {
         // a code is used once
         mvc.perform(post("/api/auth/register").contentType(JSON).content(String.format(reg.replace("0611223344", "0611223355"), ",\"otp\":\"" + lastCode() + "\"")))
                 .andExpect(status().isBadRequest());
-        // registering an existing number does not send an SMS
+        // registering an existing number: same answer as a new one (no account discovery); the owner gets a warning SMS
         mvc.perform(post("/api/auth/otp").contentType(JSON).content("{\"phone\":\"0600000001\",\"purpose\":\"REGISTER\"}"))
-                .andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("PHONE_TAKEN"));
+                .andExpect(status().isNoContent());
+        assertTrue(sent.get(sent.size() - 1).contains("حساب"), "warning SMS, no code");
+        // and the registration itself cannot tell (the code check comes first)
+        mvc.perform(post("/api/auth/register").contentType(JSON).content(String.format(reg.replace("0611223344", "0600000001"), ",\"otp\":\"123456\"")))
+                .andExpect(status().isBadRequest()).andExpect(jsonPath("$.code").value("OTP_INVALID"));
 
         // forgotten password
         int before = sent.size();
@@ -96,5 +101,25 @@ class SmsAndLimitsTest {
                 .andExpect(status().isTooManyRequests()).andExpect(jsonPath("$.code").value("TOO_MANY_ATTEMPTS"));
         String body = mvc.perform(get("/api/public/config")).andReturn().getResponse().getContentAsString();
         assertEquals(false, JsonPath.read(body, "$.smsEnabled"));
+    }
+
+    /** Failures from one address do not lock the owner out from another address. */
+    @Test
+    void lockoutIsPerAddress() throws Exception {
+        when(sms.enabled()).thenReturn(false);
+        mvc.perform(post("/api/auth/register").with(r -> { r.setRemoteAddr("192.0.2.50"); return r; }).contentType(JSON)
+                .content("{\"phone\":\"0612370001\",\"password\":\"secret12\",\"fullName\":\"Lock Test\",\"city\":\"Casablanca\"}"))
+                .andExpect(status().isCreated());
+        for (int i = 0; i < 8; i++) {
+            mvc.perform(post("/api/auth/login").with(r -> { r.setRemoteAddr("203.0.113.7"); return r; }).contentType(JSON)
+                    .content("{\"phone\":\"0612370001\",\"password\":\"wrongpass\"}")).andExpect(status().isUnauthorized());
+        }
+        mvc.perform(post("/api/auth/login").with(r -> { r.setRemoteAddr("203.0.113.7"); return r; }).contentType(JSON)
+                .content("{\"phone\":\"0612370001\",\"password\":\"secret12\"}")).andExpect(status().isTooManyRequests());
+        // a forged X-Forwarded-For does not change the address (only a trusted proxy may set it)
+        mvc.perform(post("/api/auth/login").with(r -> { r.setRemoteAddr("203.0.113.7"); return r; }).header("X-Forwarded-For", "1.2.3.4")
+                .contentType(JSON).content("{\"phone\":\"0612370001\",\"password\":\"secret12\"}")).andExpect(status().isTooManyRequests());
+        mvc.perform(post("/api/auth/login").with(r -> { r.setRemoteAddr("198.51.100.20"); return r; }).contentType(JSON)
+                .content("{\"phone\":\"0612370001\",\"password\":\"secret12\"}")).andExpect(status().isOk());
     }
 }
