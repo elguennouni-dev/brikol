@@ -37,7 +37,10 @@ import java.util.UUID;
 @Transactional
 public class MediaService {
     private static final long MB = 1024L * 1024L;
-    private static final Map<String, String> IMAGE = Map.of("image/jpeg", "jpg", "image/png", "png", "image/webp", "webp");
+    // WebP is not accepted: it cannot be re-encoded here (the app converts every photo to JPEG before upload)
+    private static final Map<String, String> IMAGE = Map.of("image/jpeg", "jpg", "image/png", "png");
+    /** Larger pictures are refused before decoding (decompression bombs). */
+    private static final long MAX_PIXELS = 40_000_000L;
     private static final Map<String, String> VIDEO = Map.of("video/mp4", "mp4", "video/quicktime", "mov", "video/webm", "webm",
             "video/3gpp", "3gp");
     private static final Map<String, String> AUDIO = Map.of("audio/webm", "weba", "audio/ogg", "ogg", "audio/mp4", "m4a",
@@ -46,7 +49,10 @@ public class MediaService {
             Media.JOB_BEFORE, Media.JOB_AFTER, Media.RECEIPT, Media.CASE);
     /** Files anyone involved in a job may send. */
     private static final Set<String> ANY_ROLE = Set.of(Media.RECEIPT, Media.CASE);
-    private static final int MAX_PER_DAY = 80;
+    @org.springframework.beans.factory.annotation.Value("${app.limits.uploads-per-day:60}")
+    int maxPerDay = 60;
+    @org.springframework.beans.factory.annotation.Value("${app.limits.uploads-per-hour:25}")
+    int maxPerHour = 25;
 
     private final MediaRepository repo;
     private final Path root;
@@ -67,7 +73,8 @@ public class MediaService {
         if (file == null || file.isEmpty()) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "FILE_EMPTY");
         }
-        if (repo.countByOwnerIdAndCreatedAtAfter(me.userId(), Instant.now().minus(1, ChronoUnit.DAYS)) >= MAX_PER_DAY) {
+        if (repo.countByOwnerIdAndCreatedAtAfter(me.userId(), Instant.now().minus(1, ChronoUnit.DAYS)) >= maxPerDay
+                || repo.countByOwnerIdAndCreatedAtAfter(me.userId(), Instant.now().minus(1, ChronoUnit.HOURS)) >= maxPerHour) {
             throw new ApiException(HttpStatus.TOO_MANY_REQUESTS, "TOO_MANY_FILES");
         }
         String mime = file.getContentType() == null ? "" : file.getContentType().toLowerCase(Locale.ROOT);
@@ -97,6 +104,12 @@ public class MediaService {
             throw new ApiException(HttpStatus.PAYLOAD_TOO_LARGE, "FILE_TOO_BIG");
         }
         checkSignature(file, kind, mime);
+        // Photos are decoded and written again: drops EXIF (GPS position of the client's home...), and anything
+        // glued after or inside the picture. Audio / video must not carry web markup.
+        byte[] clean = "IMAGE".equals(kind) ? reencode(file, mime) : null;
+        if (clean == null) {
+            rejectMarkup(file);
+        }
 
         String id = UUID.randomUUID().toString();
         LocalDate d = LocalDate.now(ZoneOffset.UTC);
@@ -104,8 +117,12 @@ public class MediaService {
         Path target = root.resolve(rel).normalize();
         try {
             Files.createDirectories(target.getParent());
-            try (InputStream in = file.getInputStream()) {
-                Files.copy(in, target, StandardCopyOption.REPLACE_EXISTING);
+            if (clean != null) {
+                Files.write(target, clean);
+            } else {
+                try (InputStream in = file.getInputStream()) {
+                    Files.copy(in, target, StandardCopyOption.REPLACE_EXISTING);
+                }
             }
         } catch (IOException e) {
             throw new ApiException(HttpStatus.INTERNAL_SERVER_ERROR, "UPLOAD_FAILED");
@@ -116,7 +133,7 @@ public class MediaService {
         m.purpose = p;
         m.kind = kind;
         m.mime = mime;
-        m.sizeBytes = file.getSize();
+        m.sizeBytes = clean != null ? clean.length : file.getSize();
         m.fileName = rel;
         repo.save(m);
         return dto(m);
@@ -139,6 +156,74 @@ public class MediaService {
     }
 
     /** Rejects files whose first bytes do not match an image (and anything that looks like HTML/script). */
+    static byte[] reencode(MultipartFile file, String mime) {
+        try (InputStream raw = file.getInputStream();
+             javax.imageio.stream.ImageInputStream iis = javax.imageio.ImageIO.createImageInputStream(raw)) {
+            java.util.Iterator<javax.imageio.ImageReader> readers = javax.imageio.ImageIO.getImageReaders(iis);
+            if (iis == null || !readers.hasNext()) {
+                throw new ApiException(HttpStatus.UNSUPPORTED_MEDIA_TYPE, "FILE_TYPE");
+            }
+            javax.imageio.ImageReader reader = readers.next();
+            java.awt.image.BufferedImage img;
+            try {
+                reader.setInput(iis, true, true);              // ignore metadata
+                long px = (long) reader.getWidth(0) * reader.getHeight(0);
+                if (px <= 0 || px > MAX_PIXELS) {
+                    throw new ApiException(HttpStatus.PAYLOAD_TOO_LARGE, "FILE_TOO_BIG");
+                }
+                img = reader.read(0);
+            } finally {
+                reader.dispose();
+            }
+            java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
+            if ("image/png".equals(mime)) {
+                javax.imageio.ImageIO.write(img, "png", out);
+            } else {
+                java.awt.image.BufferedImage rgb = img;
+                if (img.getType() != java.awt.image.BufferedImage.TYPE_INT_RGB) {
+                    rgb = new java.awt.image.BufferedImage(img.getWidth(), img.getHeight(), java.awt.image.BufferedImage.TYPE_INT_RGB);
+                    java.awt.Graphics2D g = rgb.createGraphics();
+                    g.setColor(java.awt.Color.WHITE);
+                    g.fillRect(0, 0, img.getWidth(), img.getHeight());
+                    g.drawImage(img, 0, 0, null);
+                    g.dispose();
+                }
+                javax.imageio.ImageWriter w = javax.imageio.ImageIO.getImageWritersByFormatName("jpeg").next();
+                javax.imageio.ImageWriteParam p = w.getDefaultWriteParam();
+                p.setCompressionMode(javax.imageio.ImageWriteParam.MODE_EXPLICIT);
+                p.setCompressionQuality(0.88f);
+                try (javax.imageio.stream.ImageOutputStream ios = javax.imageio.ImageIO.createImageOutputStream(out)) {
+                    w.setOutput(ios);
+                    w.write(null, new javax.imageio.IIOImage(rgb, null, null), p);
+                } finally {
+                    w.dispose();
+                }
+            }
+            return out.toByteArray();
+        } catch (ApiException e) {
+            throw e;
+        } catch (IOException | RuntimeException e) {
+            throw new ApiException(HttpStatus.UNSUPPORTED_MEDIA_TYPE, "FILE_TYPE");
+        }
+    }
+
+    /** Audio / video carrying HTML, SVG or script text (polyglots for hosting pages under our domain) are refused. */
+    private static void rejectMarkup(MultipartFile file) {
+        byte[] head = new byte[256 * 1024];
+        int n;
+        try (InputStream in = file.getInputStream()) {
+            n = in.readNBytes(head, 0, head.length);
+        } catch (IOException e) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "FILE_TYPE");
+        }
+        String text = new String(head, 0, n, java.nio.charset.StandardCharsets.ISO_8859_1).toLowerCase(Locale.ROOT);
+        for (String marker : new String[]{"<html", "<script", "<!doctype", "<svg", "<?xml", "<body", "<iframe", "javascript:"}) {
+            if (text.contains(marker)) {
+                throw new ApiException(HttpStatus.UNSUPPORTED_MEDIA_TYPE, "FILE_TYPE");
+            }
+        }
+    }
+
     private static void checkSignature(MultipartFile file, String kind, String mime) {
         byte[] h = new byte[12];
         int n;

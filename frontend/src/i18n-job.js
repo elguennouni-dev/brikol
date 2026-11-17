@@ -1,6 +1,16 @@
 /* The job after an offer is accepted: agreement, code, extras, advances, warranty, problems (merged into T by i18n.js). */
 export const J = {
   ar: {
+    logoutAll: 'خرج من جميع الأجهزة', logoutAllDone: 'خرجتي من جميع الأجهزة',
+    ob_SUSPENDED: 'الحساب ديالك كحرفي موقوف من طرف الفريق: {r}', obChangesPending: 'التعديلات ديالك (الوصف، المدينة، البلاصة، واتساب، الصور) كتسنا موافقة الفريق قبل ما يبانو.',
+    err_WHATSAPP_INVALID: 'رقم الواتساب خاصو يكون رقم مغربي (06 ولا 07)', err_CIN_TAKEN: 'هاد البطاقة مستعملة فحساب آخر',
+    err_TOO_MANY_OPEN_REQUESTS: 'عندك بزاف ديال الطلبات مفتوحين. سالي ولا لغي شي واحد قبل.', err_TOO_MANY_REQUESTS_TODAY: 'وصلتي للعدد ديال الطلبات فهاد النهار. عاود غدا.',
+    err_TOO_MANY_FILES: 'بزاف ديال الملفات. عاود من بعد شوية.', err_NO_CHANGES: 'ما كاين حتى تعديل', err_NOT_APPROVED: 'هاد الحرفي ماشي مفعل', err_NOT_SUSPENDED: 'هاد الحرفي ماشي موقوف',
+    n_ARTISAN_CHANGES: 'تعديلات جديدة ديال {name} خاصها مراجعة', n_ARTISAN_CHANGES_APPROVED: 'التعديلات ديالك تقبلو ✓', n_ARTISAN_CHANGES_REJECTED: 'التعديلات ديالك ترفضو: {v}',
+    n_ARTISAN_SUSPENDED: 'الحساب ديالك كحرفي توقف: {v}',
+    a_st_CHANGES: 'تعديلات', a_st_SUSPENDED: 'موقوف', a_changes: 'تعديلات كتسنا', a_changesHelp: 'الحرفي مفعل: هاد التعديلات ما كيبانوش للكليان حتى توافق.',
+    a_chg_bio: 'الوصف', a_chg_city: 'المدينة', a_chg_address: 'العنوان', a_chg_lat: 'البلاصة', a_chg_whatsapp: 'واتساب', a_chg_avatarId: 'الصورة', a_chg_portfolioIds: 'الخدمات السابقة',
+    a_suspend: 'وقف الحرفي', a_suspendHelp: 'كيتحيد من المنصة: ما كيوصلوش طلبات، ما يقدرش يصيفط عروض، وما كيبانش.', a_suspendReason: 'السبب (كيشوفو الحرفي)', a_reinstate: 'رجعو للمنصة',
     j_title: 'الخدمة', j_open: 'تابع الخدمة', j_read: 'سمع',
     j_deal: 'الاتفاق', j_agreed: 'الثمن المتافق عليه', j_extras: 'الزيادات', j_advances: 'التسبيق', j_remaining: 'الباقي للخلاص',
     j_cash: 'كاش، للصنايعي نيشان', j_dealSay: 'الثمن المتافق عليه {a} درهم. الزيادات {e} درهم. التسبيق {d} درهم. الباقي للخلاص {r} درهم.',
@@ -66,6 +76,16 @@ export const J = {
     a_t_appt: 'الموعد', a_t_arrived: 'وصل', a_t_finished: 'قال سالات', a_t_done: 'تسد', a_t_warranty: 'الضمانة حتى',
   },
   fr: {
+    logoutAll: 'Se déconnecter de tous les appareils', logoutAllDone: 'Déconnecté de tous les appareils',
+    ob_SUSPENDED: 'Votre compte artisan est suspendu par l’équipe : {r}', obChangesPending: 'Vos modifications (description, ville, position, WhatsApp, photos) attendent la validation de l’équipe avant d’être visibles.',
+    err_WHATSAPP_INVALID: 'Le WhatsApp doit être un numéro marocain (06 ou 07)', err_CIN_TAKEN: 'Cette CIN est déjà utilisée par un autre compte',
+    err_TOO_MANY_OPEN_REQUESTS: 'Vous avez trop de demandes ouvertes. Terminez ou annulez-en une d’abord.', err_TOO_MANY_REQUESTS_TODAY: 'Nombre de demandes du jour atteint. Réessayez demain.',
+    err_TOO_MANY_FILES: 'Trop de fichiers. Réessayez dans un moment.', err_NO_CHANGES: 'Aucune modification', err_NOT_APPROVED: 'Cet artisan n’est pas actif', err_NOT_SUSPENDED: 'Cet artisan n’est pas suspendu',
+    n_ARTISAN_CHANGES: 'Modifications de {name} à valider', n_ARTISAN_CHANGES_APPROVED: 'Vos modifications sont validées ✓', n_ARTISAN_CHANGES_REJECTED: 'Vos modifications sont refusées : {v}',
+    n_ARTISAN_SUSPENDED: 'Votre compte artisan est suspendu : {v}',
+    a_st_CHANGES: 'Modifications', a_st_SUSPENDED: 'Suspendu', a_changes: 'Modifications en attente', a_changesHelp: 'Artisan actif : ces modifications ne sont pas visibles par les clients tant que vous ne les validez pas.',
+    a_chg_bio: 'Description', a_chg_city: 'Ville', a_chg_address: 'Adresse', a_chg_lat: 'Position', a_chg_whatsapp: 'WhatsApp', a_chg_avatarId: 'Photo', a_chg_portfolioIds: 'Réalisations',
+    a_suspend: 'Suspendre l’artisan', a_suspendHelp: 'Le retire de la plateforme : plus de demandes, plus d’offres, plus de page visible.', a_suspendReason: 'Raison (visible par l’artisan)', a_reinstate: 'Rétablir sur la plateforme',
     j_title: 'Suivi du travail', j_open: 'Suivi du travail', j_read: 'Écouter',
     j_deal: 'L’accord', j_agreed: 'Prix convenu', j_extras: 'Suppléments', j_advances: 'Avances', j_remaining: 'Reste à payer',
     j_cash: 'En espèces, directement à l’artisan', j_dealSay: 'Prix convenu {a} dirhams. Suppléments {e} dirhams. Avances {d} dirhams. Reste à payer {r} dirhams.',

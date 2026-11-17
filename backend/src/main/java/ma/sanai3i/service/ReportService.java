@@ -36,6 +36,7 @@ public class ReportService {
     }
 
     private final ReportRepository reports;
+    private final ma.sanai3i.repo.OfferRepository offers;
     private final UserRepository users;
     private final ArtisanProfileRepository artisans;
     private final JobRequestRepository requests;
@@ -46,7 +47,8 @@ public class ReportService {
 
     public ReportService(ReportRepository reports, UserRepository users, ArtisanProfileRepository artisans,
                          JobRequestRepository requests, ReviewRepository reviews, MessageRepository messages,
-                         NotificationService notifications, AuditService audit) {
+                         NotificationService notifications, AuditService audit, ma.sanai3i.repo.OfferRepository offers) {
+        this.offers = offers;
         this.reports = reports;
         this.users = users;
         this.artisans = artisans;
@@ -55,6 +57,21 @@ public class ReportService {
         this.messages = messages;
         this.notifications = notifications;
         this.audit = audit;
+    }
+
+    /** A client and an artisan know each other once an offer was made on one of the client's requests. */
+    private boolean related(Long a, Long b) {
+        return offers.existsByArtisanUserIdAndRequestClientId(a, b) || offers.existsByArtisanUserIdAndRequestClientId(b, a);
+    }
+
+    /** The client who posted it, an artisan who made an offer, or an approved artisan who is shown it. */
+    private boolean canSee(Long meId, ma.sanai3i.domain.JobRequest r) {
+        if (r.client.id.equals(meId) || offers.existsByRequestIdAndArtisanUserId(r.id, meId)) {
+            return true;
+        }
+        return r.status == ma.sanai3i.domain.RequestStatus.OPEN && artisans.findByUserId(meId)
+                .filter(a -> a.status == ma.sanai3i.domain.ArtisanStatus.APPROVED && a.category.id.equals(r.category.id))
+                .map(a -> RequestService.matches(a, r)).orElse(false);
     }
 
     public void create(AuthUser me, ReportInput in) {
@@ -66,15 +83,47 @@ public class ReportService {
         Long targetId = in.targetId();
         Long targetUser;
         switch (type) {
+        // Only what the reporter can actually see may be reported; anything else answers "not found" like an
+        // unknown id (no way to probe which ids exist, no way to raise someone's report count from outside).
+        Long meId = me.userId();
+        switch (type) {
             case "ARTISAN" -> {           // the app knows artisans by their profile id
                 targetUser = artisans.findById(targetId).map(a -> a.user.id).orElseThrow(this::notFound);
                 type = "USER";
                 targetId = targetUser;
+                if (!related(meId, targetUser)) {
+                    throw notFound();
+                }
             }
-            case "USER" -> targetUser = users.findById(targetId).map(u -> u.id).orElseThrow(this::notFound);
-            case "REQUEST" -> targetUser = requests.findById(targetId).map(r -> r.client.id).orElseThrow(this::notFound);
-            case "REVIEW" -> targetUser = reviews.findById(targetId).map(r -> r.client.id).orElseThrow(this::notFound);
-            case "MESSAGE" -> targetUser = messages.findById(targetId).map(m -> m.senderId).orElseThrow(this::notFound);
+            case "USER" -> {
+                targetUser = users.findById(targetId).map(u -> u.id).orElseThrow(this::notFound);
+                if (!related(meId, targetUser)) {
+                    throw notFound();
+                }
+            }
+            case "REQUEST" -> {
+                ma.sanai3i.domain.JobRequest req = requests.findById(targetId).orElseThrow(this::notFound);
+                if (!canSee(meId, req)) {
+                    throw notFound();
+                }
+                targetUser = req.client.id;
+            }
+            case "REVIEW" -> {
+                ma.sanai3i.domain.Review rv = reviews.findById(targetId).orElseThrow(this::notFound);
+                if (!rv.artisan.user.id.equals(meId)) {           // the reviewed artisan
+                    throw notFound();
+                }
+                targetUser = rv.client.id;
+            }
+            case "MESSAGE" -> {
+                ma.sanai3i.domain.Message msg = messages.findById(targetId).orElseThrow(this::notFound);
+                ma.sanai3i.domain.JobRequest req = requests.findById(msg.requestId).orElseThrow(this::notFound);
+                boolean party = req.client.id.equals(meId) || offers.existsByRequestIdAndArtisanUserId(req.id, meId);
+                if (!party) {
+                    throw notFound();
+                }
+                targetUser = msg.senderId;
+            }
             default -> throw new ApiException(HttpStatus.BAD_REQUEST, "VALIDATION");
         }
         if (targetUser.equals(me.userId())) {

@@ -99,4 +99,8 @@ public class JobRequest {
     public String doneBy;
     @Column(name = "warranty_until")
     public Instant warrantyUntil;
+
+    /** The team removed the client's review: it cannot be posted again. */
+    @Column(name = "review_removed", nullable = false)
+    public boolean reviewRemoved;
 }

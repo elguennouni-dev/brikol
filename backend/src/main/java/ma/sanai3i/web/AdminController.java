@@ -122,6 +122,32 @@ public class AdminController {
         return admin.approveArtisan(me, id);
     }
 
+    @PostMapping("/artisan-files/{id}/changes/approve")
+    public ma.sanai3i.dto.AdminDto.ArtisanReview approveChanges(@AuthenticationPrincipal AuthUser me, @PathVariable Long id) {
+        access.require(me, Permission.FILES);
+        return admin.approveChanges(me, id);
+    }
+
+    @PostMapping("/artisan-files/{id}/changes/reject")
+    public ma.sanai3i.dto.AdminDto.ArtisanReview rejectChanges(@AuthenticationPrincipal AuthUser me, @PathVariable Long id,
+                                                               @Valid @RequestBody ma.sanai3i.dto.AdminDto.ReviewDecision body) {
+        access.require(me, Permission.FILES);
+        return admin.rejectChanges(me, id, body.reason());
+    }
+
+    @PostMapping("/artisan-files/{id}/suspend")
+    public ma.sanai3i.dto.AdminDto.ArtisanReview suspend(@AuthenticationPrincipal AuthUser me, @PathVariable Long id,
+                                                         @Valid @RequestBody ma.sanai3i.dto.AdminDto.ReviewDecision body) {
+        access.require(me, Permission.FILES);
+        return admin.suspendArtisan(me, id, body.reason());
+    }
+
+    @PostMapping("/artisan-files/{id}/reinstate")
+    public ma.sanai3i.dto.AdminDto.ArtisanReview reinstate(@AuthenticationPrincipal AuthUser me, @PathVariable Long id) {
+        access.require(me, Permission.FILES);
+        return admin.reinstateArtisan(me, id);
+    }
+
     @PostMapping("/artisan-files/{id}/reject")
     public ma.sanai3i.dto.AdminDto.ArtisanReview reject(@AuthenticationPrincipal AuthUser me, @PathVariable Long id,
                                                         @Valid @RequestBody ma.sanai3i.dto.AdminDto.ReviewDecision body) {

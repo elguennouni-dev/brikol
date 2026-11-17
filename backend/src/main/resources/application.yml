@@ -7,7 +7,12 @@ server:
     remoteip:
       remote-ip-header: x-forwarded-for
       protocol-header: x-forwarded-proto
+    # "Location: /app/" instead of an absolute URL built from Host / X-Forwarded-* headers:
+    # no host, port or prefix injection, and never a switch from https to http
+    use-relative-redirects: true
   error:
+    whitelabel:
+      enabled: false
     include-message: never
     include-stacktrace: never
     include-binding-errors: never
@@ -42,6 +47,12 @@ app:
     ttl-days: 30
   # Creates demo artisans, clients and requests when the database is empty
   seed: ${APP_SEED:false}
+  # per-account limits (abuse / notification spam)
+  limits:
+    max-open-requests: ${LIMIT_OPEN_REQUESTS:5}
+    requests-per-day: ${LIMIT_REQUESTS_PER_DAY:10}
+    uploads-per-day: ${LIMIT_UPLOADS_PER_DAY:60}
+    uploads-per-hour: ${LIMIT_UPLOADS_PER_HOUR:25}
   # password of the demo accounts; empty = random (nobody can sign in as a demo user)
   seed-password: ${APP_SEED_PASSWORD:}
   # Only needed when the web app is served from another origin (not for the WebView apps)

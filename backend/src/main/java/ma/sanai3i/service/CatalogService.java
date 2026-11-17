@@ -75,7 +75,7 @@ public class CatalogService {
      */
     public ArtisanDetail artisan(ma.sanai3i.security.AuthUser me, boolean staff, Long id) {
         ArtisanProfile a = artisans.findById(id)
-                .filter(x -> x.status == ma.sanai3i.domain.ArtisanStatus.APPROVED)
+                .filter(x -> x.status == ma.sanai3i.domain.ArtisanStatus.APPROVED && !x.user.blocked)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "ARTISAN_NOT_FOUND"));
         boolean self = a.user.id.equals(me.userId());
         boolean full = staff || self || offers.existsByArtisanIdAndRequestClientIdAndStatus(a.id, me.userId(), ma.sanai3i.domain.OfferStatus.ACCEPTED);

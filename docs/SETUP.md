@@ -233,3 +233,18 @@ Both apps just load the web app from the server and open `tel:`, WhatsApp, mailt
 - **Container**: the app runs as an unprivileged user (uid 10001); `deploy.sh` gives it the `uploads/` and `secrets/` folders.
 - **Dependencies**: Dependabot opens weekly pull requests for Maven, npm, Gradle, Docker and GitHub Actions.
   Spring Boot 3.5's open-source support ended in June 2026: plan the move to Spring Boot 4.
+
+### After the penetration test (2026-11-17)
+- HTTPS only, TLS 1.2/1.3, proxy headers set by Nginx: `deploy/nginx/brikol.conf`, steps in `deploy/HARDENING.md`.
+- Login: failures are counted per number **and** address; one address cannot lock the owner out from another.
+- `POST /api/auth/logout` signs out the current token, `POST /api/auth/logout-all` every device.
+- Artisans see distances in whole km from the ~1 km grid; an approved artisan's new place, bio, city, WhatsApp, photo or
+  portfolio waits for the team (Admin → Files → Changes). WhatsApp must be a Moroccan mobile number.
+- Admin → Files: **Suspend** takes an artisan off the platform (no requests, offers or page) until **Reinstate**.
+  Blocked, suspended and unpaid artisans get no new requests.
+- A review removed by the team cannot be posted again. One CIN = one artisan account.
+- Limits per account: 5 open requests, 10 requests a day, 20 chat messages a minute, 25 uploads an hour
+  (`LIMIT_*` variables). Concurrent "accept" calls are serialised.
+- Photos are decoded and re-encoded (EXIF/GPS and appended data removed); WebP is refused; audio/video carrying HTML is refused.
+- Reports only on what the reporter can see. Errors are JSON codes; no whitelabel page, no Spring `/logout`.
+- Test data from the testers: `sudo bash deploy/cleanup-pentest.sh`.

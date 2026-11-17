@@ -38,7 +38,19 @@ class MarketplaceRulesTest {
     MockMvc mvc;
 
     private static final String JSON = MediaType.APPLICATION_JSON_VALUE;
-    private static final byte[] JPEG = {(byte) 0xFF, (byte) 0xD8, (byte) 0xFF, (byte) 0xE0, 0, 16, 'J', 'F', 'I', 'F', 0, 1, 1, 0};
+    /** A real (tiny) JPEG: uploads are decoded and re-encoded by the server. */
+    static final byte[] JPEG = tinyJpeg();
+
+    static byte[] tinyJpeg() {
+        try {
+            java.awt.image.BufferedImage img = new java.awt.image.BufferedImage(8, 8, java.awt.image.BufferedImage.TYPE_INT_RGB);
+            java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
+            javax.imageio.ImageIO.write(img, "jpeg", out);
+            return out.toByteArray();
+        } catch (java.io.IOException e) {
+            throw new IllegalStateException(e);
+        }
+    }
 
     private String body(MockHttpServletRequestBuilder b) throws Exception {
         return mvc.perform(b).andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
@@ -188,8 +200,14 @@ class MarketplaceRulesTest {
         mvc.perform(post("/api/requests/" + reqId + "/offers").header("Authorization", art).contentType(JSON)
                 .content("{\"price\":300}")).andExpect(status().isForbidden()).andExpect(jsonPath("$.code").value("TOO_FAR"));
         // moves to Casablanca (Maarif), 15 km: shown, with the distance
+        // approved: a new place waits for the team (it could be used to triangulate clients), then applies
         mvc.perform(put("/api/artisan/me/onboarding").header("Authorization", art).contentType(JSON)
-                .content("{\"lat\":33.5731,\"lng\":-7.5898,\"radiusKm\":15}")).andExpect(status().isOk());
+                        .content("{\"lat\":33.5731,\"lng\":-7.5898,\"radiusKm\":15}"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.pendingChanges.lat").value(33.5731)).andExpect(jsonPath("$.lat").value(34.0209));
+        String stillFar = body(get("/api/artisan/requests").header("Authorization", art));
+        assertTrue(((List<Object>) JsonPath.read(stillFar, "$[?(@.id == " + reqId + ")]")).isEmpty());
+        mvc.perform(post("/api/admin/artisan-files/" + artisanId + "/changes/approve").header("Authorization", admin))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.file.pendingChanges").doesNotExist());
         String near = body(get("/api/artisan/requests").header("Authorization", art));
         List<Number> dist = JsonPath.read(near, "$[?(@.id == " + reqId + ")].distanceKm");
         assertEquals(1, dist.size());

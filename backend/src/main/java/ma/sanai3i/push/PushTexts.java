@@ -48,7 +48,11 @@ final class PushTexts {
             Map.entry("CASE_NEW", new String[]{"مشكل جديد خاصو المعالجة", "Nouveau litige à traiter"}),
             Map.entry("CASE_RESOLVED", new String[]{"الفريق جاوب على المشكل ديالك", "L’équipe a répondu à votre problème"}),
             Map.entry("STRIKE_GIVEN", new String[]{"توصلتي بإنذار", "Vous avez reçu un avertissement"}),
-            Map.entry("ACCOUNT_SUSPENDED", new String[]{"الحساب ديالك توقف 7 أيام بسبب الإنذارات", "Votre compte est suspendu 7 jours (avertissements)"}));
+            Map.entry("ACCOUNT_SUSPENDED", new String[]{"الحساب ديالك توقف 7 أيام بسبب الإنذارات", "Votre compte est suspendu 7 jours (avertissements)"}),
+            Map.entry("ARTISAN_CHANGES", new String[]{"تعديلات جديدة ديال {name} خاصها مراجعة", "Modifications de {name} à valider"}),
+            Map.entry("ARTISAN_CHANGES_APPROVED", new String[]{"التعديلات ديالك تقبلو ✓", "Vos modifications sont validées ✓"}),
+            Map.entry("ARTISAN_CHANGES_REJECTED", new String[]{"التعديلات ديالك ترفضو: {v}", "Vos modifications sont refusées : {v}"}),
+            Map.entry("ARTISAN_SUSPENDED", new String[]{"الحساب ديالك كحرفي توقف: {v}", "Votre compte artisan est suspendu : {v}"}));
 
     static String text(String kind, String lang, String name, String value) {
         String[] pair = T.get(kind);

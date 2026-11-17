@@ -53,4 +53,38 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorBody> conflict(DataIntegrityViolationException e) {
         return ResponseEntity.status(HttpStatus.CONFLICT).body(new ErrorBody("CONFLICT", Map.of()));
     }
+
+    /** Bad enum / number in a query or path ("?status=XYZ"): a client error, not a 500. */
+    @ExceptionHandler({org.springframework.web.method.annotation.MethodArgumentTypeMismatchException.class,
+            IllegalArgumentException.class, jakarta.validation.ConstraintViolationException.class})
+    public ResponseEntity<ErrorBody> badArgument(Exception e) {
+        return ResponseEntity.badRequest().body(new ErrorBody("VALIDATION", Map.of()));
+    }
+
+    @ExceptionHandler({org.springframework.web.servlet.resource.NoResourceFoundException.class,
+            org.springframework.web.servlet.NoHandlerFoundException.class})
+    public ResponseEntity<ErrorBody> notFound(Exception e) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new ErrorBody("NOT_FOUND", Map.of()));
+    }
+
+    @ExceptionHandler(org.springframework.web.HttpRequestMethodNotSupportedException.class)
+    public ResponseEntity<ErrorBody> method(Exception e) {
+        return ResponseEntity.status(HttpStatus.METHOD_NOT_ALLOWED).body(new ErrorBody("METHOD_NOT_ALLOWED", Map.of()));
+    }
+
+    /** Anything unexpected: logged on the server, a bare code for the client (no stack trace, no message). */
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<ErrorBody> unexpected(Exception e) {
+        if (e instanceof org.springframework.web.context.request.async.AsyncRequestNotUsableException) {
+            return null;                                  // client closed a live stream
+        }
+        if (e instanceof org.springframework.web.ErrorResponse er) {          // 415, 406... keep Spring's status
+            return ResponseEntity.status(er.getStatusCode()).body(new ErrorBody("BAD_REQUEST", Map.of()));
+        }
+        if (e instanceof org.springframework.security.access.AccessDeniedException) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new ErrorBody("FORBIDDEN", Map.of()));
+        }
+        org.slf4j.LoggerFactory.getLogger(GlobalExceptionHandler.class).error("Unexpected error", e);
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new ErrorBody("SERVER_ERROR", Map.of()));
+    }
 }

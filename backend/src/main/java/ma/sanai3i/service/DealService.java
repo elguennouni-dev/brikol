@@ -39,6 +39,8 @@ public class DealService {
     private record Side(JobRequest r, Offer offer, User me, User other, String myRole) {
     }
 
+    @org.springframework.beans.factory.annotation.Autowired
+    private ma.sanai3i.security.RateLimiter limiter;
     private final JobRequestRepository requests;
     private final OfferRepository offers;
     private final MessageRepository messages;
@@ -85,6 +87,9 @@ public class DealService {
         String text = body == null ? "" : body.trim();
         if (text.isEmpty()) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "VALIDATION");
+        }
+        if (!limiter.allow("msg:" + s.me().id, 20, 60_000L) || !limiter.allow("msgh:" + s.me().id, 300, 3_600_000L)) {
+            throw new ApiException(HttpStatus.TOO_MANY_REQUESTS, "RATE_LIMITED");
         }
         Message m = new Message();
         m.requestId = requestId;

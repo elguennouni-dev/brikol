@@ -28,6 +28,15 @@ public class RateLimitFilter extends OncePerRequestFilter {
      * The proxy headers are resolved by Tomcat (server.forward-headers-strategy=native) from trusted proxies only.
      * Reading X-Forwarded-For here would let anyone pick a new "IP" per request and skip every limit.
      */
+    /** Address of the request being handled (outside a request: "local"). */
+    public static String currentIp() {
+        if (org.springframework.web.context.request.RequestContextHolder.getRequestAttributes()
+                instanceof org.springframework.web.context.request.ServletRequestAttributes attrs) {
+            return clientIp(attrs.getRequest());
+        }
+        return "local";
+    }
+
     public static String clientIp(HttpServletRequest request) {
         return request.getRemoteAddr();
     }

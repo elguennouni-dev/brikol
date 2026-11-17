@@ -77,6 +77,11 @@ public class RequestService {
 
     // ------------------------------------------------------------------ client side
 
+    @org.springframework.beans.factory.annotation.Value("${app.limits.max-open-requests:5}")
+    int maxOpenRequests = 5;
+    @org.springframework.beans.factory.annotation.Value("${app.limits.requests-per-day:10}")
+    int requestsPerDay = 10;
+
     public RequestDto create(AuthUser me, CreateRequest in) {
         if (me.role() != Role.CLIENT) {
             throw new ApiException(HttpStatus.FORBIDDEN, "CLIENT_ONLY");
@@ -84,6 +89,17 @@ public class RequestService {
         User client = users.findById(me.userId())
                 .orElseThrow(() -> new ApiException(HttpStatus.UNAUTHORIZED, "UNKNOWN_USER"));
         StrikeService.requireActive(client);
+        // each request pings every matching artisan: a few at a time, a few a day
+        if (requests.countByClientIdAndStatusIn(client.id, List.of(RequestStatus.OPEN, RequestStatus.ACCEPTED)) >= maxOpenRequests) {
+            throw new ApiException(HttpStatus.TOO_MANY_REQUESTS, "TOO_MANY_OPEN_REQUESTS");
+        }
+        if (requests.countByClientIdAndCreatedAtAfter(client.id, java.time.Instant.now().minus(1, java.time.temporal.ChronoUnit.DAYS)) >= requestsPerDay) {
+            throw new ApiException(HttpStatus.TOO_MANY_REQUESTS, "TOO_MANY_REQUESTS_TODAY");
+        }
+        if ((in.lat() == null) != (in.lng() == null)
+                || (in.lat() != null && (Math.abs(in.lat()) > 90 || Math.abs(in.lng()) > 180))) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "VALIDATION");
+        }
         Category category = categories.findByCode(in.categoryCode())
                 .orElseThrow(() -> new ApiException(HttpStatus.BAD_REQUEST, "UNKNOWN_CATEGORY"));
 
@@ -110,7 +126,8 @@ public class RequestService {
         audit.logUser(client, "REQUEST_CREATED", "REQUEST", r.id, category.code + " · " + r.budget + " MAD");
         // active artisans of this trade who work around this place hear about it right away
         for (ArtisanProfile a : artisans.findByCategoryId(category.id)) {
-            if (a.status == ArtisanStatus.APPROVED && matches(a, r)) {
+            // only artisans who can actually answer: approved, not blocked or suspended, subscription OK
+            if (a.status == ArtisanStatus.APPROVED && !a.user.blocked && !a.user.suspended() && billing.canWork(a) && matches(a, r)) {
                 notifications.notify(a.user.id, "NEW_REQUEST", r.id, null, null, category.code);
             }
         }
@@ -156,6 +173,7 @@ public class RequestService {
 
     /** The client accepts the artisan's current price (not possible while the artisan has to answer a counter-offer). */
     public RequestDto accept(AuthUser me, Long requestId, Long offerId) {
+        requests.lockById(requestId);              // concurrent accepts: the second one sees REQUEST_NOT_OPEN
         JobRequest r = ownedRequest(me, requestId);
         Offer chosen = openOffer(r, offerId);
         if ("CLIENT".equals(chosen.lastBy)) {
@@ -259,7 +277,7 @@ public class RequestService {
         if (r.status != RequestStatus.DONE) {
             throw new ApiException(HttpStatus.CONFLICT, "REQUEST_NOT_DONE");
         }
-        if (reviews.existsByRequestId(r.id)) {
+        if (reviews.existsByRequestId(r.id) || r.reviewRemoved) {
             throw new ApiException(HttpStatus.CONFLICT, "ALREADY_REVIEWED");
         }
         Offer accepted = acceptedOffer(r);
@@ -283,8 +301,8 @@ public class RequestService {
     public List<RequestDto> openForArtisan(AuthUser me) {
         ArtisanProfile a = approvedArtisan(me);
         List<RequestDto> out = new ArrayList<>();
-        if (a.user.suspended()) {
-            return out;                           // the app shows why (suspendedUntil in /api/me)
+        if (a.user.suspended() || !billing.canWork(a)) {
+            return out;                           // the app shows why (suspension banner / plan page)
         }
         for (JobRequest r : requests.findByStatusAndCategoryIdOrderByCreatedAtDesc(RequestStatus.OPEN, a.category.id)) {
             if (!matches(a, r)) {
@@ -384,11 +402,19 @@ public class RequestService {
         return Cities.same(a.city, r.city);
     }
 
+    /**
+     * Distance from the artisan to the client's point rounded to 2 decimals (the same ~1 km grid the artisan is
+     * shown). Using the exact point let an artisan who moves his own position triangulate the client's home.
+     */
     static Double distance(ArtisanProfile a, JobRequest r) {
         if (a.lat == null || a.lng == null || r.lat == null || r.lng == null) {
             return null;
         }
-        return Geo.km(a.lat, a.lng, r.lat, r.lng);
+        return Geo.km(a.lat, a.lng, coarse(r.lat), coarse(r.lng));
+    }
+
+    static double coarse(double v) {
+        return Math.round(v * 100) / 100.0;
     }
 
     private ArtisanProfile approvedArtisan(AuthUser me) {
@@ -411,7 +437,7 @@ public class RequestService {
                 visible.add(mapper.offer(o, rating, o.status == OfferStatus.ACCEPTED));
             }
         }
-        boolean reviewed = r.status == RequestStatus.DONE && reviews.existsByRequestId(r.id);
+        boolean reviewed = r.status == RequestStatus.DONE && (reviews.existsByRequestId(r.id) || r.reviewRemoved);
         return mapper.request(r, all.size(), reviewed, visible, null, null, true, null, r.client.id);
     }
 
@@ -420,7 +446,8 @@ public class RequestService {
         boolean accepted = mine != null && mine.status == OfferStatus.ACCEPTED;
         String clientPhone = accepted ? r.client.phone : null;
         Double d = distance(a, r);
-        Double km = d == null ? null : Math.round(d * 2) / 2.0;      // half-km steps: no exact position leak
+        // whole kilometres, rounded up, from the coarse point: about 1 km of uncertainty, like the map pin
+        Double km = d == null ? null : (double) Math.max(1, (long) Math.ceil(d));
         return mapper.request(r, offers.countByRequestId(r.id), false, List.of(), myOffer, clientPhone, accepted, km, a.user.id);
     }
 

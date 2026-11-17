@@ -118,4 +118,12 @@ public class ArtisanProfile {
     @OneToMany(mappedBy = "artisan", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     @OrderBy("id ASC")
     public List<ServiceItem> services = new ArrayList<>();
+
+    /** JSON of the changes an approved artisan made to what clients see, waiting for the team. */
+    @Column(name = "pending_changes", columnDefinition = "TEXT")
+    public String pendingChanges;
+    @Column(name = "pending_since")
+    public java.time.Instant pendingSince;
+    @Column(name = "suspended_reason", length = 300)
+    public String suspendedReason;
 }

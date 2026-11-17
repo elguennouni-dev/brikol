@@ -9,6 +9,10 @@ import java.util.Optional;
 public interface OfferRepository extends JpaRepository<Offer, Long> {
     boolean existsByArtisanIdAndRequestClientId(Long artisanId, Long clientId);
 
+    boolean existsByArtisanUserIdAndRequestClientId(Long artisanUserId, Long clientId);
+
+    boolean existsByRequestIdAndArtisanUserId(Long requestId, Long artisanUserId);
+
     boolean existsByArtisanIdAndRequestClientIdAndStatus(Long artisanId, Long clientId, ma.sanai3i.domain.OfferStatus status);
 
     List<Offer> findByRequestIdOrderByPriceAsc(Long requestId);

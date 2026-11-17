@@ -45,7 +45,8 @@ public class SecurityConfig {
             "frame-ancestors 'none'");
 
     @Bean
-    SecurityFilterChain filterChain(HttpSecurity http, JwtService jwtService, BlockList blockList) throws Exception {
+    SecurityFilterChain filterChain(HttpSecurity http, JwtService jwtService, BlockList blockList,
+                                    TokenRevocations revocations) throws Exception {
         http
                 // No cookies: the token travels in the Authorization header, which a third-party site cannot add,
                 // so cross-site request forgery does not apply.
@@ -54,9 +55,18 @@ public class SecurityConfig {
                         .contentSecurityPolicy(c -> c.policyDirectives(CSP))
                         .frameOptions(f -> f.deny())
                         .referrerPolicy(r -> r.policy(ReferrerPolicyHeaderWriter.ReferrerPolicy.STRICT_ORIGIN_WHEN_CROSS_ORIGIN))
-                        .httpStrictTransportSecurity(t -> t.includeSubDomains(false).maxAgeInSeconds(31_536_000))
+                        // always sent: the public site is HTTPS only (Nginx redirects port 80), even if a proxy
+                        // forgot X-Forwarded-Proto
+                        .httpStrictTransportSecurity(t -> t.requestMatcher(org.springframework.security.web.util.matcher.AnyRequestMatcher.INSTANCE)
+                                .includeSubDomains(true).maxAgeInSeconds(31_536_000))
+                        .crossOriginOpenerPolicy(c -> c.policy(org.springframework.security.web.header.writers.CrossOriginOpenerPolicyHeaderWriter.CrossOriginOpenerPolicy.SAME_ORIGIN_ALLOW_POPUPS))
                         .permissionsPolicyHeader(pp -> pp.policy("camera=(self), microphone=(self), geolocation=(self), payment=(), usb=()")))
                 .cors(Customizer.withDefaults())
+                // no form login, no /logout redirect, no saved requests: a pure token API
+                .formLogin(f -> f.disable())
+                .httpBasic(b -> b.disable())
+                .logout(l -> l.disable())
+                .requestCache(c -> c.disable())
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .dispatcherTypeMatchers(DispatcherType.ASYNC, DispatcherType.ERROR).permitAll()   // live (SSE) responses
@@ -66,7 +76,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/**").authenticated()
                         .anyRequest().permitAll())      // static web app, /error, health
                 .exceptionHandling(e -> e.authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)))
-                .addFilterBefore(new JwtAuthFilter(jwtService, blockList), UsernamePasswordAuthenticationFilter.class);
+                .addFilterBefore(new JwtAuthFilter(jwtService, blockList, revocations), UsernamePasswordAuthenticationFilter.class);
         return http.build();
     }
 

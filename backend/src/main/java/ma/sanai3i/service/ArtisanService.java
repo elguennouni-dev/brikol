@@ -28,6 +28,8 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.Locale;
 import java.util.regex.Pattern;
 
@@ -73,14 +75,18 @@ public class ArtisanService {
         if (in.availableToday() != null) {
             a.availableToday = in.availableToday();
         }
-        if (in.bioAr() != null) {
-            a.bioAr = in.bioAr().trim();
-        }
-        if (in.bioFr() != null) {
-            a.bioFr = in.bioFr().trim();
+        Map<String, Object> changes = new LinkedHashMap<>();
+        if (in.bioFr() != null || in.bioAr() != null) {
+            changes.put("bio", (in.bioFr() != null ? in.bioFr() : in.bioAr()).trim());
         }
         if (in.whatsapp() != null && !in.whatsapp().isBlank()) {
-            a.whatsapp = in.whatsapp().trim();
+            changes.put("whatsapp", whatsapp(in.whatsapp()));
+        }
+        changes.entrySet().removeIf(e -> unchanged(a, e.getKey(), e.getValue()));
+        if (a.status == ArtisanStatus.APPROVED || a.status == ArtisanStatus.SUSPENDED) {
+            propose(a, changes);
+        } else {
+            apply(a, changes);
         }
         return detail(a);
     }
@@ -157,45 +163,45 @@ public class ArtisanService {
                 link(owner, a.id, in.idBackId(), Media.ID_BACK, true);
             }
         }
+        if (in.radiusKm() != null) {
+            a.radiusKm = in.radiusKm();           // only changes which requests he sees (from a ~1 km grid)
+        }
+        // what clients see: applied at once while the file is not approved yet, otherwise kept for the team
+        Map<String, Object> changes = new LinkedHashMap<>();
         if (in.bio() != null) {
-            String bio = in.bio().trim();
-            a.bioFr = bio;
-            a.bioAr = bio;
+            changes.put("bio", in.bio().trim());
         }
         if (notBlank(in.city())) {
-            a.city = in.city().trim();
-            a.user.city = a.city;
+            changes.put("city", in.city().trim());
         }
         if (in.address() != null) {
-            a.address = in.address().isBlank() ? null : in.address().trim();
+            changes.put("address", in.address().isBlank() ? "" : in.address().trim());
         }
         if (in.lat() != null && in.lng() != null) {
-            a.lat = in.lat();
-            a.lng = in.lng();
-        }
-        if (in.radiusKm() != null) {
-            a.radiusKm = in.radiusKm();
+            if (Math.abs(in.lat()) > 90 || Math.abs(in.lng()) > 180) {
+                throw new ApiException(HttpStatus.BAD_REQUEST, "VALIDATION");
+            }
+            changes.put("lat", in.lat());
+            changes.put("lng", in.lng());
         }
         if (notBlank(in.whatsapp())) {
-            a.whatsapp = in.whatsapp().trim();
+            changes.put("whatsapp", whatsapp(in.whatsapp()));
         }
         if (in.avatarId() != null) {
             media.owned(owner, in.avatarId(), Media.AVATAR);
-            a.avatarId = in.avatarId();
+            changes.put("avatarId", in.avatarId());
         }
         if (in.portfolioIds() != null) {
-            // the list given is the new portfolio (order kept); files left out are unlinked
-            List<Media> current = mediaRepo.findByArtisanIdAndPurposeOrderByCreatedAtAsc(a.id, Media.PORTFOLIO);
-            HashSet<String> keep = new HashSet<>(in.portfolioIds());
-            for (Media m : current) {
-                if (!keep.contains(m.id)) {
-                    m.artisanId = null;
-                }
-            }
             for (String id : in.portfolioIds()) {
-                Media m = media.owned(owner, id, Media.PORTFOLIO);
-                m.artisanId = a.id;
+                media.owned(owner, id, Media.PORTFOLIO);
             }
+            changes.put("portfolioIds", new ArrayList<>(in.portfolioIds()));
+        }
+        changes.entrySet().removeIf(e -> unchanged(a, e.getKey(), e.getValue()));
+        if (a.status == ArtisanStatus.APPROVED || a.status == ArtisanStatus.SUSPENDED) {
+            propose(a, changes);
+        } else {
+            apply(a, changes);
         }
         if (a.status == ArtisanStatus.REJECTED) {
             a.status = ArtisanStatus.DRAFT;       // fixing a refused file: it goes back to draft until sent again
@@ -203,14 +209,129 @@ public class ArtisanService {
         return onboardingOf(a);
     }
 
+    /** A Moroccan mobile number, stored as +2126XXXXXXXX (no free text: it becomes a wa.me link). */
+    static String whatsapp(String raw) {
+        try {
+            String p = ma.sanai3i.common.Phones.normalize(raw);
+            if (!p.startsWith("+2126") && !p.startsWith("+2127")) {
+                throw new ApiException(HttpStatus.BAD_REQUEST, "WHATSAPP_INVALID");
+            }
+            return p;
+        } catch (ApiException e) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "WHATSAPP_INVALID");
+        }
+    }
+
+    private static boolean unchanged(ArtisanProfile a, String key, Object v) {
+        return switch (key) {
+            case "bio" -> v.equals(a.bioFr);
+            case "city" -> v.equals(a.city);
+            case "address" -> v.equals(a.address == null ? "" : a.address);
+            case "lat" -> v.equals(a.lat);
+            case "lng" -> false;                          // lat and lng go together
+            case "whatsapp" -> v.equals(a.whatsapp);
+            case "avatarId" -> v.equals(a.avatarId);
+            default -> false;
+        };
+    }
+
+    /** Approved artisan: the change waits for the team (merged with earlier pending changes). */
+    private void propose(ArtisanProfile a, Map<String, Object> changes) {
+        if (changes.isEmpty()) {
+            return;
+        }
+        Map<String, Object> pending = pendingOf(a);
+        boolean first = pending.isEmpty();
+        pending.putAll(changes);
+        a.pendingChanges = json(pending);
+        if (first) {
+            a.pendingSince = Instant.now();
+            for (User admin : users.findAll()) {
+                if (admin.role == Role.ADMIN && !admin.blocked
+                        && (admin.superAdmin || admin.permissionSet().contains(ma.sanai3i.domain.Permission.FILES))) {
+                    notifications.notify(admin.id, "ARTISAN_CHANGES", null, a.nameAr, a.nameFr, a.category.code);
+                }
+            }
+        }
+        audit.logUser(a.user, "ARTISAN_CHANGES_PROPOSED", "ARTISAN", a.id, String.join(",", changes.keySet()));
+    }
+
+    /** Called by the team (or directly while the file is not approved yet). */
+    @SuppressWarnings("unchecked")
+    public void apply(ArtisanProfile a, Map<String, Object> changes) {
+        if (changes.containsKey("bio")) {
+            String bio = (String) changes.get("bio");
+            a.bioFr = bio;
+            a.bioAr = bio;
+        }
+        if (changes.containsKey("city")) {
+            a.city = (String) changes.get("city");
+            a.user.city = a.city;
+        }
+        if (changes.containsKey("address")) {
+            String ad = (String) changes.get("address");
+            a.address = ad == null || ad.isBlank() ? null : ad;
+        }
+        if (changes.get("lat") instanceof Number lat && changes.get("lng") instanceof Number lng) {
+            a.lat = lat.doubleValue();
+            a.lng = lng.doubleValue();
+        }
+        if (changes.containsKey("whatsapp")) {
+            a.whatsapp = (String) changes.get("whatsapp");
+        }
+        if (changes.containsKey("avatarId")) {
+            a.avatarId = (String) changes.get("avatarId");
+        }
+        if (changes.get("portfolioIds") instanceof List<?> ids) {
+            // the list given is the new portfolio (order kept); files left out are unlinked
+            HashSet<Object> keep = new HashSet<>(ids);
+            for (Media m : mediaRepo.findByArtisanIdAndPurposeOrderByCreatedAtAsc(a.id, Media.PORTFOLIO)) {
+                if (!keep.contains(m.id)) {
+                    m.artisanId = null;
+                }
+            }
+            for (Object id : ids) {
+                Media m = media.owned(a.user.id, String.valueOf(id), Media.PORTFOLIO);
+                m.artisanId = a.id;
+            }
+        }
+    }
+
+    public Map<String, Object> pendingOf(ArtisanProfile a) {
+        if (a.pendingChanges == null || a.pendingChanges.isBlank()) {
+            return new LinkedHashMap<>();
+        }
+        try {
+            return new LinkedHashMap<>(JSON.readValue(a.pendingChanges,
+                    new com.fasterxml.jackson.core.type.TypeReference<Map<String, Object>>() {
+                    }));
+        } catch (Exception e) {
+            return new LinkedHashMap<>();
+        }
+    }
+
+    private static String json(Map<String, Object> map) {
+        try {
+            return JSON.writeValueAsString(map);
+        } catch (Exception e) {
+            throw new ApiException(HttpStatus.INTERNAL_SERVER_ERROR, "SERVER_ERROR");
+        }
+    }
+
+    private static final com.fasterxml.jackson.databind.ObjectMapper JSON = new com.fasterxml.jackson.databind.ObjectMapper();
+
     /** Sends the file to the admins. Every required field must be filled. */
     public OnboardingDto submit(AuthUser me) {
         ArtisanProfile a = profileOf(me);
-        if (a.status == ArtisanStatus.PENDING || a.status == ArtisanStatus.APPROVED) {
+        if (a.status == ArtisanStatus.PENDING || a.status == ArtisanStatus.APPROVED || a.status == ArtisanStatus.SUSPENDED) {
             throw new ApiException(HttpStatus.CONFLICT, "UNDER_REVIEW");
         }
         if (!missing(a).isEmpty()) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "ONBOARDING_INCOMPLETE");
+        }
+        // one identity, one artisan account (no second free trial, no review farming with a twin account)
+        if (artisans.existsByCinAndIdNot(a.cin, a.id)) {
+            throw new ApiException(HttpStatus.CONFLICT, "CIN_TAKEN");
         }
         a.status = ArtisanStatus.PENDING;
         a.submittedAt = Instant.now();
@@ -229,12 +350,14 @@ public class ArtisanService {
         List<Media> ids = new ArrayList<>(mediaRepo.findByArtisanIdAndPurposeOrderByCreatedAtAsc(a.id, Media.ID_FRONT));
         List<Media> backs = mediaRepo.findByArtisanIdAndPurposeOrderByCreatedAtAsc(a.id, Media.ID_BACK);
         MediaDto avatar = a.avatarId == null ? null : mediaRepo.findById(a.avatarId).map(MediaService::dto).orElse(null);
-        return new OnboardingDto(a.status.name(), a.rejectionReason, a.user.fullName, a.cin, a.yearsExperience,
+        Map<String, Object> pending = pendingOf(a);
+        return new OnboardingDto(a.status.name(), a.status == ArtisanStatus.SUSPENDED ? a.suspendedReason : a.rejectionReason,
+                a.user.fullName, a.cin, a.yearsExperience,
                 a.bioFr, a.category.code, a.city, a.address, a.lat, a.lng, a.radiusKm, a.whatsapp, avatar,
                 ids.isEmpty() ? null : MediaService.dto(ids.get(ids.size() - 1)),
                 backs.isEmpty() ? null : MediaService.dto(backs.get(backs.size() - 1)),
                 mediaRepo.findByArtisanIdAndPurposeOrderByCreatedAtAsc(a.id, Media.PORTFOLIO).stream().map(MediaService::dto).toList(),
-                missing(a));
+                missing(a), pending.isEmpty() ? null : pending, a.pendingSince);
     }
 
     private List<String> missing(ArtisanProfile a) {

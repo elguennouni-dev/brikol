@@ -82,10 +82,10 @@ public class AuthService {
             return false;
         }
         String phone = Phones.normalize(rawPhone);
+        otp.verify(phone, OtpService.REGISTER, code);          // first: only the owner of the number gets further
         if (users.existsByPhone(phone)) {
             throw new ApiException(HttpStatus.CONFLICT, "PHONE_TAKEN");
         }
-        otp.verify(phone, OtpService.REGISTER, code);
         return true;
     }
 
@@ -209,8 +209,14 @@ public class AuthService {
         } catch (ApiException e) {
             throw new ApiException(HttpStatus.UNAUTHORIZED, "INVALID_CREDENTIALS");
         }
-        // brute force: 8 wrong passwords for a number in 15 minutes lock it for the rest of the window
-        if (limiter.count("loginfail:" + phone, 15 * 60_000L) >= 8) {
+        // Brute force without locking the real owner out: the limit is per number AND per address. Someone failing
+        // from one address cannot block the owner signing in from another. If a number gets many failures from
+        // many addresses, only the addresses that already failed are stopped.
+        String ip = ma.sanai3i.security.RateLimitFilter.currentIp();
+        String pairKey = "loginfail:" + phone + "|" + ip;
+        String phoneKey = "loginfail:" + phone;
+        int pairFails = limiter.count(pairKey, LOCK_WINDOW_MS);
+        if (pairFails >= PAIR_LIMIT || (pairFails > 0 && limiter.count(phoneKey, LOCK_WINDOW_MS) >= NUMBER_LIMIT)) {
             throw new ApiException(HttpStatus.TOO_MANY_REQUESTS, "TOO_MANY_ATTEMPTS");
         }
         if (in.password().getBytes(java.nio.charset.StandardCharsets.UTF_8).length > 72) {
@@ -224,19 +230,46 @@ public class AuthService {
             encoder.matches(in.password(), dummyHash);
         }
         if (found == null || !encoder.matches(in.password(), found.passwordHash)) {
-            limiter.record("loginfail:" + phone);
+            limiter.record(pairKey);
+            limiter.record(phoneKey);
             audit.log(found == null ? null : found.id, phone, "LOGIN_FAILED", "USER", found == null ? null : found.id, null);
             throw new ApiException(HttpStatus.UNAUTHORIZED, "INVALID_CREDENTIALS");
         }
         return loginChecked(found, "LOGIN");
     }
 
-    /** BCrypt only uses the first 72 bytes: longer passwords (Arabic letters take 2 bytes) are refused. */
-    private static void checkPassword(String password) {
+    static final long LOCK_WINDOW_MS = 15 * 60_000L;
+    static final int PAIR_LIMIT = 8;
+    static final int NUMBER_LIMIT = 30;
+
+    /** The most used passwords (also in Morocco): refused even when long enough. */
+    static final java.util.Set<String> COMMON = java.util.Set.of("12345678", "123456789", "1234567890", "123123123", "11111111",
+            "00000000", "12121212", "87654321", "password", "password1", "passw0rd", "azerty123", "azertyuiop", "qwerty123",
+            "qwertyuiop", "motdepasse", "abc12345", "iloveyou", "11223344", "123456789a", "a1234567", "maroc123", "morocco123",
+            "casablanca", "marrakech", "brikol123", "sanai3i123", "bismillah", "00000000a", "12344321", "1q2w3e4r", "zxcvbnm123");
+
+    /** At least 8 characters, not a well-known password, and at most 72 bytes (BCrypt ignores the rest). */
+    static void checkPassword(String password) {
         if (password == null || password.length() < 8
-                || password.getBytes(java.nio.charset.StandardCharsets.UTF_8).length > 72) {
+                || password.getBytes(java.nio.charset.StandardCharsets.UTF_8).length > 72
+                || COMMON.contains(password.toLowerCase(java.util.Locale.ROOT))
+                || password.chars().distinct().count() < 3) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "PASSWORD_WEAK");
         }
+    }
+
+    /** Signs out this device only. */
+    public void logout(AuthUser me, ma.sanai3i.security.TokenRevocations revocations) {
+        if (me != null) {
+            revocations.revoke(me);
+        }
+    }
+
+    /** Signs out every device (lost phone...). */
+    public void logoutAll(AuthUser me) {
+        User u = users.findById(me.userId()).orElseThrow(() -> new ApiException(HttpStatus.UNAUTHORIZED, "UNKNOWN_USER"));
+        blockList.revokeTokens(u);
+        audit.logUser(u, "LOGOUT_ALL", "USER", u.id, null);
     }
 
     @Transactional(readOnly = true)

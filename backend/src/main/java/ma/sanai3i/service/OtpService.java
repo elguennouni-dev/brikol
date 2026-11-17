@@ -52,9 +52,6 @@ public class OtpService {
         String phone = Phones.normalize(rawPhone);
         String p = RESET.equals(purpose) ? RESET : REGISTER;
         boolean exists = users.existsByPhone(phone);
-        if (REGISTER.equals(p) && exists) {
-            throw new ApiException(HttpStatus.CONFLICT, "PHONE_TAKEN");
-        }
         Instant now = Instant.now();
         OtpCode last = codes.findFirstByPhoneOrderByIdDesc(phone).orElse(null);
         if (last != null && last.createdAt.isAfter(now.minus(60, ChronoUnit.SECONDS))) {
@@ -71,6 +68,13 @@ public class OtpService {
         o.expiresAt = now.plus(10, ChronoUnit.MINUTES);
         codes.save(o);
         if (RESET.equals(p) && !exists) {
+            return;
+        }
+        if (REGISTER.equals(p) && exists) {
+            // same answer as for a new number (no account discovery); the owner learns it by SMS
+            sms.send(phone, "fr".equals(lang)
+                    ? "Brikol : ce numéro a déjà un compte. Connectez-vous ou utilisez « Mot de passe oublié »."
+                    : "Brikol: هاد الرقم عندو حساب. دخل ولا ستعمل «نسيت كلمة السر».");
             return;
         }
         String text = "fr".equals(lang)

@@ -106,7 +106,9 @@ public final class Dto {
             String categoryCode, String city, String address, Double lat, Double lng, int radiusKm, String whatsapp,
             MediaDto avatar, MediaDto idFront, MediaDto idBack, List<MediaDto> portfolio,
             /** Fields still missing before the file can be sent for review. */
-            List<String> missing) {
+            List<String> missing,
+            /** An approved artisan's changes waiting for the team (null when none). */
+            java.util.Map<String, Object> pendingChanges, java.time.Instant pendingSince) {
     }
 
     public record OnboardingInput(

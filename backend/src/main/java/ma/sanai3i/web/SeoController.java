@@ -186,7 +186,7 @@ public class SeoController {
     private Map<String, List<ArtisanProfile>> groups() {
         Map<String, List<ArtisanProfile>> out = new LinkedHashMap<>();
         for (ArtisanProfile a : artisans.findAllByOrderByVerifiedDescIdAsc()) {
-            if (a.status != ArtisanStatus.APPROVED || a.city == null || citySlug(a.city).isEmpty()) {
+            if (a.status != ArtisanStatus.APPROVED || a.user.blocked || a.city == null || citySlug(a.city).isEmpty()) {
                 continue;
             }
             out.computeIfAbsent("/artisans/" + a.category.code + "/" + citySlug(a.city), k -> new ArrayList<>()).add(a);
