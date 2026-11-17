@@ -44,12 +44,7 @@ public class AuditService {
 
     private static String clientIp() {
         if (RequestContextHolder.getRequestAttributes() instanceof ServletRequestAttributes attrs) {
-            HttpServletRequest req = attrs.getRequest();
-            String forwarded = req.getHeader("X-Forwarded-For");
-            if (forwarded != null && !forwarded.isBlank()) {
-                return forwarded.split(",")[0].trim();
-            }
-            return req.getRemoteAddr();
+            return attrs.getRequest().getRemoteAddr();        // already resolved from trusted proxies by Tomcat
         }
         return null;
     }

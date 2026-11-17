@@ -68,7 +68,7 @@ export default function Login({ route }) {
     guarded(async () => {
       let res;
       if (reg && needCode) {
-        if (!f.fullName.trim() || f.password.length < 6) throw { code: 'VALIDATION' };
+        if (!f.fullName.trim() || f.password.length < 8) throw { code: 'VALIDATION' };
         await sms.send(f.phone);
         return;
       }
@@ -104,7 +104,7 @@ export default function Login({ route }) {
     setBusy(true);
     guarded(async () => {
       if (resetSms.sentTo !== f.phone) { await resetSms.send(f.phone); return; }
-      if (f.password.length < 6) throw { code: 'VALIDATION' };
+      if (f.password.length < 8) throw { code: 'VALIDATION' };
       done(await api('/auth/reset', { method: 'POST', body: { phone: f.phone, otp: resetSms.code, password: f.password } }));
     }).then(() => setBusy(false));
   };

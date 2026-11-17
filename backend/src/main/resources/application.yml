@@ -1,6 +1,16 @@
 server:
   port: ${PORT:8080}
-  forward-headers-strategy: framework
+  # Tomcat's RemoteIpValve: X-Forwarded-For / -Proto are only trusted from internal proxies (Nginx on the host,
+  # Docker network), and the client address is read from the right, so a client cannot fake its IP.
+  forward-headers-strategy: native
+  tomcat:
+    remoteip:
+      remote-ip-header: x-forwarded-for
+      protocol-header: x-forwarded-proto
+  error:
+    include-message: never
+    include-stacktrace: never
+    include-binding-errors: never
 
 spring:
   application:
@@ -32,6 +42,8 @@ app:
     ttl-days: 30
   # Creates demo artisans, clients and requests when the database is empty
   seed: ${APP_SEED:false}
+  # password of the demo accounts; empty = random (nobody can sign in as a demo user)
+  seed-password: ${APP_SEED_PASSWORD:}
   # Only needed when the web app is served from another origin (not for the WebView apps)
   cors-origins: ${CORS_ORIGINS:}
   # public address of the site (links in push notifications, SEO pages)

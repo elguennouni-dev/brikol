@@ -32,6 +32,13 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             Optional<AuthUser> parsed = jwt.parse(header.substring(7));
             if (parsed.isPresent()) {
                 AuthUser user = parsed.get();
+                if (!blocked.tokenValid(user.userId(), user.tokenVersion())) {
+                    response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                    response.setContentType("application/json");
+                    response.setCharacterEncoding(StandardCharsets.UTF_8.name());
+                    response.getWriter().write("{\"code\":\"SESSION\"}");
+                    return;
+                }
                 if (blocked.isBlocked(user.userId())) {
                     response.setStatus(HttpServletResponse.SC_FORBIDDEN);
                     response.setContentType("application/json");

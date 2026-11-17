@@ -26,8 +26,10 @@ services:
       DB_URL: jdbc:mysql://db:3306/sanai3i?useUnicode=true&characterEncoding=utf8&serverTimezone=UTC
       DB_USER: sanai3i
       DB_PASSWORD: ${DB_PASSWORD:-change-me}
-      JWT_SECRET: ${JWT_SECRET:-please-change-this-secret-to-a-long-random-string-0123456789}
+      # required: JWT_SECRET=$(openssl rand -hex 32) docker compose up --build
+      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET to a random value of 32+ characters}
       APP_SEED: ${APP_SEED:-true}   # demo data; set to false in production
+      APP_SEED_PASSWORD: ${APP_SEED_PASSWORD:-}   # empty = demo accounts get random passwords
 
 volumes:
   dbdata:

@@ -27,8 +27,11 @@ public class CatalogService {
     private final ReviewRepository reviews;
     private final Mapper mapper;
 
+    private final ma.sanai3i.repo.OfferRepository offers;
+
     public CatalogService(CategoryRepository categories, ArtisanProfileRepository artisans,
-                          ReviewRepository reviews, Mapper mapper) {
+                          ReviewRepository reviews, Mapper mapper, ma.sanai3i.repo.OfferRepository offers) {
+        this.offers = offers;
         this.categories = categories;
         this.artisans = artisans;
         this.reviews = reviews;
@@ -66,11 +69,21 @@ public class CatalogService {
                 .toList();
     }
 
-    public ArtisanDetail artisan(Long id) {
+    /**
+     * Clients meet artisans only through offers: a profile is visible to staff, to the artisan, and to a client who
+     * received an offer from them; the phone numbers only once that client accepted one (same rule as the offers).
+     */
+    public ArtisanDetail artisan(ma.sanai3i.security.AuthUser me, boolean staff, Long id) {
         ArtisanProfile a = artisans.findById(id)
                 .filter(x -> x.status == ma.sanai3i.domain.ArtisanStatus.APPROVED)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "ARTISAN_NOT_FOUND"));
-        return mapper.detail(a, mapper.ratingOf(a.id), reviews.findByArtisanIdOrderByCreatedAtDesc(a.id));
+        boolean self = a.user.id.equals(me.userId());
+        boolean full = staff || self || offers.existsByArtisanIdAndRequestClientIdAndStatus(a.id, me.userId(), ma.sanai3i.domain.OfferStatus.ACCEPTED);
+        if (!full && !offers.existsByArtisanIdAndRequestClientId(a.id, me.userId())) {
+            throw new ApiException(HttpStatus.NOT_FOUND, "ARTISAN_NOT_FOUND");     // same answer as "does not exist"
+        }
+        ArtisanDetail d = mapper.detail(a, mapper.ratingOf(a.id), reviews.findByArtisanIdOrderByCreatedAtDesc(a.id));
+        return full ? d : new ArtisanDetail(d.summary(), d.bioAr(), d.bioFr(), null, null, d.services(), d.reviews(), d.portfolio());
     }
 
     private static String haystack(ArtisanProfile a) {

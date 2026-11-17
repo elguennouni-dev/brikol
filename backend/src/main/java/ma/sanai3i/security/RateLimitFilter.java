@@ -24,11 +24,11 @@ public class RateLimitFilter extends OncePerRequestFilter {
         this.limiter = limiter;
     }
 
+    /**
+     * The proxy headers are resolved by Tomcat (server.forward-headers-strategy=native) from trusted proxies only.
+     * Reading X-Forwarded-For here would let anyone pick a new "IP" per request and skip every limit.
+     */
     public static String clientIp(HttpServletRequest request) {
-        String fwd = request.getHeader("X-Forwarded-For");
-        if (fwd != null && !fwd.isBlank()) {
-            return fwd.split(",")[0].trim();
-        }
         return request.getRemoteAddr();
     }
 
@@ -53,6 +53,12 @@ public class RateLimitFilter extends OncePerRequestFilter {
                 ok = limiter.allow("report:" + ip, 15, 60 * MIN);
             } else if (p.matches("/api/requests/\\d+/messages")) {
                 ok = limiter.allow("chat:" + ip, 40, MIN);
+            } else if (p.equals("/api/requests")) {
+                ok = limiter.allow("newreq:" + ip, 20, 60 * MIN);
+            } else if (p.matches("/api/requests/\\d+/offers")) {
+                ok = limiter.allow("offer:" + ip, 60, 10 * MIN);
+            } else if (p.matches("/api/requests/\\d+/job/.*")) {
+                ok = limiter.allow("job:" + ip, 60, 10 * MIN);
             }
             if (!ok) {
                 response.setStatus(429);

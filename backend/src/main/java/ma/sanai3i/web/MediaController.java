@@ -66,6 +66,7 @@ public class MediaController {
                 .contentType(MediaType.parseMediaType(m.mime))
                 .cacheControl(cache)
                 .header("X-Content-Type-Options", "nosniff")
+                .header("Content-Security-Policy", "default-src 'none'; img-src 'self'; media-src 'self'; sandbox")
                 .header(HttpHeaders.CONTENT_DISPOSITION, "inline")
                 .body(media.resource(m));
     }

@@ -197,6 +197,7 @@ public class AdminService {
         u.blocked = true;
         u.blockedReason = isBlank(reason) ? null : reason.trim();
         blockList.block(u.id);
+        blockList.revokeTokens(u);
         hub.disconnect(u.id);
         log(admin, "USER_BLOCKED", "USER", u.id, u.fullName + (u.blockedReason == null ? "" : " · " + u.blockedReason));
         return userRow(u);
@@ -221,6 +222,8 @@ public class AdminService {
             sb.append(PASSWORD_ALPHABET.charAt(random.nextInt(PASSWORD_ALPHABET.length())));
         }
         u.passwordHash = encoder.encode(sb.toString());
+        blockList.revokeTokens(u);
+        hub.disconnect(u.id);
         log(admin, "PASSWORD_RESET", "USER", u.id, u.fullName);
         return sb.toString();
     }
@@ -534,7 +537,7 @@ public class AdminService {
             return "";
         }
         String v = s;
-        if (!v.isEmpty() && "=+-@".indexOf(v.charAt(0)) >= 0) {
+        if (!v.isEmpty() && "=+-@\t\r".indexOf(v.charAt(0)) >= 0) {      // no spreadsheet formulas
             v = "'" + v;
         }
         return "\"" + v.replace("\"", "\"\"") + "\"";

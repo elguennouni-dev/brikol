@@ -7,6 +7,10 @@ import java.util.List;
 import java.util.Optional;
 
 public interface OfferRepository extends JpaRepository<Offer, Long> {
+    boolean existsByArtisanIdAndRequestClientId(Long artisanId, Long clientId);
+
+    boolean existsByArtisanIdAndRequestClientIdAndStatus(Long artisanId, Long clientId, ma.sanai3i.domain.OfferStatus status);
+
     List<Offer> findByRequestIdOrderByPriceAsc(Long requestId);
 
     List<Offer> findByArtisanIdOrderByCreatedAtDesc(Long artisanId);

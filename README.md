@@ -147,7 +147,7 @@ Demo accounts (dev profile only), password `demo1234`:
 
 SMS, push and Google sign-in are off until you give them credentials. The app works without them (phone + password sign-up). Set `SMS_PROVIDER=log` if you want to try the SMS code flow locally; codes are then printed in the logs.
 
-To run with MySQL instead: `docker compose up --build`. Production deployment (Docker on a VPS, env file, update script) is described in [deploy/README-DEPLOY.md](deploy/README-DEPLOY.md), and every setting is listed in [docs/SETUP.md](docs/SETUP.md).
+To run with MySQL instead: `JWT_SECRET=$(openssl rand -hex 32) docker compose up --build`. Production deployment (Docker on a VPS, env file, update script) is described in [deploy/README-DEPLOY.md](deploy/README-DEPLOY.md), and every setting is listed in [docs/SETUP.md](docs/SETUP.md).
 
 ## Tests
 

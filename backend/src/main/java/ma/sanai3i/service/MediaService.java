@@ -122,6 +122,22 @@ public class MediaService {
         return dto(m);
     }
 
+    /** Audio / video: the first bytes must be a known container (MP4/MOV/3GP/M4A, WebM, Ogg, MP3, WAV, AAC). */
+    private static boolean mediaContainer(byte[] h, int n) {
+        if (n < 4) {
+            return false;
+        }
+        boolean ftyp = n >= 8 && h[4] == 'f' && h[5] == 't' && h[6] == 'y' && h[7] == 'p';
+        boolean mov = n >= 8 && ((h[4] == 'm' && h[5] == 'o' && h[6] == 'o' && h[7] == 'v')
+                || (h[4] == 'w' && h[5] == 'i' && h[6] == 'd' && h[7] == 'e') || (h[4] == 'm' && h[5] == 'd' && h[6] == 'a' && h[7] == 't'));
+        boolean webm = (h[0] & 0xff) == 0x1A && (h[1] & 0xff) == 0x45 && (h[2] & 0xff) == 0xDF && (h[3] & 0xff) == 0xA3;
+        boolean ogg = h[0] == 'O' && h[1] == 'g' && h[2] == 'g' && h[3] == 'S';
+        boolean id3 = h[0] == 'I' && h[1] == 'D' && h[2] == '3';
+        boolean mpegFrame = (h[0] & 0xff) == 0xFF && ((h[1] & 0xff) & 0xE0) == 0xE0;     // MP3 and ADTS AAC
+        boolean wav = n >= 12 && h[0] == 'R' && h[1] == 'I' && h[2] == 'F' && h[3] == 'F' && h[8] == 'W' && h[9] == 'A' && h[10] == 'V' && h[11] == 'E';
+        return ftyp || mov || webm || ogg || id3 || mpegFrame || wav;
+    }
+
     /** Rejects files whose first bytes do not match an image (and anything that looks like HTML/script). */
     private static void checkSignature(MultipartFile file, String kind, String mime) {
         byte[] h = new byte[12];
@@ -135,6 +151,9 @@ public class MediaService {
             throw new ApiException(HttpStatus.UNSUPPORTED_MEDIA_TYPE, "FILE_TYPE");
         }
         if (!"IMAGE".equals(kind)) {
+            if (!mediaContainer(h, n)) {
+                throw new ApiException(HttpStatus.UNSUPPORTED_MEDIA_TYPE, "FILE_TYPE");
+            }
             return;
         }
         boolean ok = switch (mime) {

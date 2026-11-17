@@ -8,6 +8,8 @@ spring:
 
 app:
   seed: true
+  # demo accounts (dev only): every seeded client / artisan uses this password
+  seed-password: demo1234
   admin:
     phone: "0699000000"
     password: admin12345

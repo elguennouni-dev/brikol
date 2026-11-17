@@ -3,6 +3,9 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 mkdir -p downloads uploads secrets
+# the app container runs as uid 10001 (not root): it must own the files it writes / reads
+chown -R 10001:10001 uploads secrets 2>/dev/null || sudo chown -R 10001:10001 uploads secrets
+chmod 700 secrets
 # The secrets must never change once the database exists (MySQL keeps the password it was created with).
 # A copy of .env is kept outside the project folder, so a fresh clone / unzip / git reset cannot lose it.
 SAFE_DIR="${SANAI3I_SECRETS:-$HOME/.sanai3i}"
@@ -26,8 +29,8 @@ if [ ! -f .env ]; then
 DB_PASSWORD=$(gen 24)
 DB_ROOT_PASSWORD=$(gen 24)
 JWT_SECRET=$(gen 64)
-# true = creates demo artisans/clients (password demo1234). Set to false for real launch, then redeploy.
-APP_SEED=true
+# true = creates demo artisans/clients (with random passwords) on an empty database
+APP_SEED=false
 ENV
   chmod 600 .env
   echo "Created .env with random secrets."
@@ -48,7 +51,9 @@ for i in $(seq 1 60); do
     echo "OK: backend is up"
     echo "Admin panel: https://snai3i.elguennouni.site/app/#/admin"
     echo "Admin phone:    $(grep '^ADMIN_PHONE=' .env | cut -d= -f2)"
-    echo "Admin password: $(grep '^ADMIN_PASSWORD=' .env | cut -d= -f2)"
+    # never print the password: terminal output ends up in logs and screenshots
+    ( umask 077; grep '^ADMIN_PASSWORD=' .env | cut -d= -f2 > "$SAFE_DIR/admin-password.txt" )
+    echo "Admin password: in $SAFE_DIR/admin-password.txt (readable by you only)."
     exit 0
   fi
   printf '.'
