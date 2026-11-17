@@ -881,8 +881,8 @@ function FileDetail({ id }) {
                 </div>
               ))}
               <div className="row g8 wrap">
-                <button className="btn sm" onClick={() => decide('changes/approve')}><Icon name="checkMark" size={16} />{t('a_approve')}</button>
-                <Confirm label={t('a_reject')} onYes={() => decide('changes/reject', { reason })}>
+                <button className="btn sm" onClick={() => decide('changes/approve')}><Icon name="checkMark" size={16} />{t('a_changesApprove')}</button>
+                <Confirm label={t('a_changesReject')} onYes={() => decide('changes/reject', { reason })}>
                   <input className="inp" value={reason} maxLength={300} onChange={(e) => setReason(e.target.value)} placeholder={t('a_rejectReason')} />
                 </Confirm>
               </div>
