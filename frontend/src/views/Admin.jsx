@@ -785,7 +785,7 @@ function Tools() {
 }
 
 // ------------------------------------------------------------ artisan activation files
-const FILE_STATUSES = ['PENDING', 'REJECTED', 'DRAFT', 'APPROVED'];
+const FILE_STATUSES = ['PENDING', 'CHANGES', 'REJECTED', 'DRAFT', 'APPROVED', 'SUSPENDED'];
 
 function Files() {
   const [status, setStatus] = useState('PENDING');
@@ -834,7 +834,7 @@ function FileDetail({ id }) {
               </div>
               <span className={`pill ${f.status === 'APPROVED' ? 'pill-ok' : f.status === 'PENDING' ? 'pill-lime' : 'pill-warn'}`}>{t('a_st_' + f.status)}</span>
             </div>
-            {f.status === 'REJECTED' && f.rejectionReason ? <div className="note wait">{f.rejectionReason}</div> : null}
+            {(f.status === 'REJECTED' || f.status === 'SUSPENDED') && f.rejectionReason ? <div className="note wait">{f.rejectionReason}</div> : null}
             <div className="kvs">
               <Field k={t('a_phone')} v={<span dir="ltr">{d.phone}</span>} />
               <Field k={t('obCin')} v={<span dir="ltr">{f.cin || '–'}</span>} />
@@ -867,6 +867,36 @@ function FileDetail({ id }) {
             {f.portfolio.length ? <div className="mgrid">{f.portfolio.map((m) => <button key={m.id} type="button" className="mthumb" onClick={() => setBig(m.url)}><img src={m.url} alt="" /></button>)}</div> : <span className="muted small">–</span>}
           </div>
 
+          {f.pendingChanges ? (
+            <div className="card col g10" style={{ borderColor: 'var(--amber)' }}>
+              <b>{t('a_changes')} <span className="muted xs">· {when(f.pendingSince)}</span></b>
+              <span className="muted xs">{t('a_changesHelp')}</span>
+              {Object.entries(f.pendingChanges).filter(([k]) => k !== 'lng').map(([k, v]) => (
+                <div key={k} className="col" style={{ gap: 2 }}>
+                  <span className="muted xs">{t('a_chg_' + k)}</span>
+                  {k === 'avatarId' ? <img src={'/media/' + v} alt="" style={{ width: 64, height: 64, borderRadius: 32, objectFit: 'cover' }} />
+                    : k === 'portfolioIds' ? <div className="mgrid">{v.map((m) => <button key={m} type="button" className="mthumb" onClick={() => setBig('/media/' + m)}><img src={'/media/' + m} alt="" /></button>)}</div>
+                    : k === 'lat' ? <MapPreview lat={v} lng={f.pendingChanges.lng} radiusKm={f.radiusKm} height={160} />
+                    : <span className="small" dir="auto" style={{ whiteSpace: 'pre-wrap' }}><s className="muted">{k === 'bio' ? f.bio : k === 'whatsapp' ? f.whatsapp : k === 'city' ? f.city : f.address}</s>{' → '}<b dir="auto">{String(v || '–')}</b></span>}
+                </div>
+              ))}
+              <div className="row g8 wrap">
+                <button className="btn sm" onClick={() => decide('changes/approve')}><Icon name="checkMark" size={16} />{t('a_changesApprove')}</button>
+                <Confirm label={t('a_changesReject')} onYes={() => decide('changes/reject', { reason })}>
+                  <input className="inp" value={reason} maxLength={300} onChange={(e) => setReason(e.target.value)} placeholder={t('a_rejectReason')} />
+                </Confirm>
+              </div>
+            </div>
+          ) : null}
+          {f.status === 'APPROVED' ? (
+            <div className="card col g8">
+              <span className="muted xs">{t('a_suspendHelp')}</span>
+              <Confirm label={t('a_suspend')} onYes={() => decide('suspend', { reason })}>
+                <input className="inp" value={reason} maxLength={300} onChange={(e) => setReason(e.target.value)} placeholder={t('a_suspendReason')} />
+              </Confirm>
+            </div>
+          ) : null}
+          {f.status === 'SUSPENDED' ? <button className="btn ghost" onClick={() => decide('reinstate')}>{t('a_reinstate')}</button> : null}
           {f.status === 'PENDING' ? (
             <div className="card col g12">
               <button className="btn" onClick={() => decide('approve')}><Icon name="checkMark" size={18} />{t('a_approve')}</button>

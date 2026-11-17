@@ -19,3 +19,4 @@ mobile/ios/build/
 backend/uploads/
 deploy/uploads/
 deploy/secrets/
+deploy/backups/

@@ -116,6 +116,14 @@ class DealsAndTrustTest {
         String admin = login("0699000000", "admin12345");
         String list = body(get("/api/artisans").header("Authorization", login("0699000000", "admin12345")).param("q", "Hassan"));
         Number hassanId = JsonPath.read(list, "$[0].id");
+        // a client can only report an artisan they dealt with: Hassan answers one of their requests first
+        String hassan = login("0611000001", "demo1234");
+        Number req = JsonPath.read(body(post("/api/requests").header("Authorization", client).contentType(JSON)
+                .content("{\"categoryCode\":\"paint\",\"description\":\"Repeindre le couloir\",\"budget\":900,\"lat\":33.5899,\"lng\":-7.6039}")), "$.id");
+        mvc.perform(post("/api/requests/" + req + "/offers").header("Authorization", hassan).contentType(JSON).content("{\"price\":900}"));
+        String stranger = "{\"targetType\":\"REQUEST\",\"targetId\":" + req + ",\"reason\":\"SPAM\"}";
+        mvc.perform(post("/api/reports").header("Authorization", login("0600000002", "demo1234")).contentType(JSON).content(stranger))
+                .andExpect(status().isNotFound());
         String report = "{\"targetType\":\"ARTISAN\",\"targetId\":" + hassanId + ",\"reason\":\"NO_SHOW\",\"details\":\"Pas venu au rendez-vous\"}";
         mvc.perform(post("/api/reports").header("Authorization", client).contentType(JSON).content(report)).andExpect(status().isCreated());
         mvc.perform(post("/api/reports").header("Authorization", client).contentType(JSON).content(report))

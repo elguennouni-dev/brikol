@@ -39,6 +39,7 @@ public class JwtService {
                 .subject(String.valueOf(user.id))
                 .claim("role", user.role.name())
                 .claim("tv", user.tokenVersion)
+                .id(java.util.UUID.randomUUID().toString())      // lets one token be signed out (logout)
                 .issuedAt(now)
                 .expiration(new Date(now.getTime() + ttlMillis))
                 .signWith(key)
@@ -51,7 +52,8 @@ public class JwtService {
             Long id = Long.valueOf(claims.getSubject());
             Role role = Role.valueOf(claims.get("role", String.class));
             Integer tv = claims.get("tv", Integer.class);
-            return Optional.of(new AuthUser(id, role, tv == null ? 0 : tv));
+            Date exp = claims.getExpiration();
+            return Optional.of(new AuthUser(id, role, tv == null ? 0 : tv, claims.getId(), exp == null ? null : exp.toInstant()));
         } catch (JwtException | IllegalArgumentException e) {
             return Optional.empty();
         }

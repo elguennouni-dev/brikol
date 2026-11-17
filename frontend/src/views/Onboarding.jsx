@@ -5,7 +5,7 @@ import { ImageSlot, PrivateImg, Lightbox } from '../media';
 import { LocationSheet, MapPreview } from '../places';
 import { centerOf } from '../geo';
 
-const STATUS_NOTE = { DRAFT: 'wait', PENDING: 'wait', APPROVED: 'ok', REJECTED: 'wait' };
+const STATUS_NOTE = { DRAFT: 'wait', PENDING: 'wait', APPROVED: 'ok', REJECTED: 'wait', SUSPENDED: 'wait' };
 
 /** The artisan's activation file: identity, profile, work area and portfolio. An admin approves it. */
 export default function Onboarding() {
@@ -35,7 +35,7 @@ export default function Onboarding() {
   const d = st.data;
   const status = d.status;
   const pending = status === 'PENDING';
-  const locked = status === 'APPROVED';          // identity and trade
+  const locked = status === 'APPROVED' || status === 'SUSPENDED';          // identity and trade
   const set = (patch) => setF((x) => ({ ...x, ...patch }));
 
   const body = () => ({
@@ -62,13 +62,14 @@ export default function Onboarding() {
 
   const missing = d.missing || [];
   const allKeys = ['fullName', 'cin', 'idFront', 'idBack', 'avatar', 'bio', 'place', 'portfolio'];
-  const noteText = status === 'REJECTED' ? t('ob_REJECTED', { r: d.rejectionReason || '' }) : t('ob_' + status);
+  const noteText = status === 'REJECTED' || status === 'SUSPENDED' ? t('ob_' + status, { r: d.rejectionReason || '' }) : t('ob_' + status);
 
   return (
     <Screen tab="me" width="narrow">
       <PageHead title={t('obTitle')} />
       <div className={`note ${STATUS_NOTE[status]}`}><Icon name={status === 'APPROVED' ? 'checkMark' : status === 'PENDING' ? 'clock' : 'doc'} size={18} /><span>{noteText}</span></div>
       {status === 'APPROVED' && user && user.artisanId ? <a className="btn sm ghost" style={{ alignSelf: 'flex-start' }} href={`#/artisan/${user.artisanId}`}>{t('seeAll')} · {t('obProfile')}</a> : null}
+      {d.pendingChanges ? <div className="note wait"><Icon name="clock" size={18} /><span>{t('obChangesPending')}</span></div> : null}
       {!locked ? <span className="muted small">{t('obIntro')}</span> : <span className="muted xs">{t('obLocked')}</span>}
       {!pending && !locked ? (
         <div className="checklist">{allKeys.map((k) => <span key={k} className={missing.includes(k) ? '' : 'ok'}>{missing.includes(k) ? '○' : '✓'} {t('m_' + k)}</span>)}</div>

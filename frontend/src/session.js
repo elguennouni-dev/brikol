@@ -196,7 +196,8 @@ const JOB_KINDS = ['OFFER_ACCEPTED', 'OFFER_AGREED', 'ARTISAN_ARRIVED', 'JOB_FIN
   'WARRANTY_NOT_FIXED', 'CASE_RESOLVED'];
 export function notifHref(n) {
   if (n.kind === 'ANNOUNCEMENT') return '#/notifications';
-  if (n.kind === 'ARTISAN_APPROVED' || n.kind === 'ARTISAN_REJECTED') return '#/onboarding';
+  if (['ARTISAN_APPROVED', 'ARTISAN_REJECTED', 'ARTISAN_SUSPENDED', 'ARTISAN_CHANGES_APPROVED', 'ARTISAN_CHANGES_REJECTED'].includes(n.kind)) return '#/onboarding';
+  if (n.kind === 'ARTISAN_CHANGES') return '#/admin/files';
   if (n.kind === 'ARTISAN_SUBMITTED') return '#/admin/files';
   if (n.kind === 'REPORT_CREATED') return '#/admin/reports';
   if (n.kind === 'CASE_NEW') return '#/admin/cases';
@@ -226,7 +227,7 @@ function onLive(n) {
   if (nstate.items.some((x) => x.id === n.id)) return;
   nset({ items: [n, ...nstate.items].slice(0, 50), unread: nstate.unread + 1, tick: nstate.tick + 1 });
   toast(notifText(n));
-  if (n.kind === 'ARTISAN_APPROVED' || n.kind === 'ARTISAN_REJECTED') refreshMe();
+  if (n.kind === 'ARTISAN_APPROVED' || n.kind === 'ARTISAN_REJECTED' || n.kind === 'ARTISAN_SUSPENDED') refreshMe();
 }
 
 // Live channel: Server-Sent Events read with fetch, so the login token goes in a header (not in the URL).

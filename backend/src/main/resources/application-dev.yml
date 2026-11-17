@@ -10,6 +10,12 @@ app:
   seed: true
   # demo accounts (dev only): every seeded client / artisan uses this password
   seed-password: demo1234
+  # tests and demos create many requests / files with the same accounts
+  limits:
+    max-open-requests: 500
+    requests-per-day: 1000
+    uploads-per-day: 1000
+    uploads-per-hour: 1000
   admin:
     phone: "0699000000"
     password: admin12345

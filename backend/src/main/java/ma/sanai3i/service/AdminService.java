@@ -291,6 +291,7 @@ public class AdminService {
         Review r = reviews.findById(id).orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "REVIEW_NOT_FOUND"));
         String detail = r.artisan.nameFr + " · " + r.rating + "★ · " + (r.body == null ? "" : r.body);
         reviews.delete(r);          // ratings are computed from the reviews, so the average updates by itself
+        requests.findById(r.requestId).ifPresent(req -> req.reviewRemoved = true);   // cannot be posted again
         log(admin, "REVIEW_DELETED", "REVIEW", id, detail);
     }
 
@@ -350,9 +351,20 @@ public class AdminService {
 
     @Transactional(readOnly = true)
     public List<ma.sanai3i.dto.AdminDto.ArtisanReviewRow> artisanFiles(String status) {
-        ma.sanai3i.domain.ArtisanStatus wanted = isBlank(status) ? ma.sanai3i.domain.ArtisanStatus.PENDING
-                : ma.sanai3i.domain.ArtisanStatus.valueOf(status.trim().toUpperCase(Locale.ROOT));
-        return artisans.findByStatusOrderBySubmittedAtAsc(wanted).stream()
+        String s = isBlank(status) ? "PENDING" : status.trim().toUpperCase(Locale.ROOT);
+        List<ArtisanProfile> list;
+        if ("CHANGES".equals(s)) {
+            list = artisans.findByPendingChangesIsNotNullOrderByPendingSinceAsc();
+        } else {
+            ma.sanai3i.domain.ArtisanStatus wanted;
+            try {
+                wanted = ma.sanai3i.domain.ArtisanStatus.valueOf(s);
+            } catch (IllegalArgumentException e) {
+                throw new ApiException(HttpStatus.BAD_REQUEST, "VALIDATION");
+            }
+            list = artisans.findByStatusOrderBySubmittedAtAsc(wanted);
+        }
+        return list.stream()
                 .map(a -> new ma.sanai3i.dto.AdminDto.ArtisanReviewRow(a.id, a.user.id, a.user.fullName, a.user.phone,
                         a.category.code, a.category.nameAr, a.category.nameFr, a.city, a.status.name(), a.createdAt, a.submittedAt))
                 .toList();
@@ -393,6 +405,66 @@ public class AdminService {
         String note = a.rejectionReason.length() > 150 ? a.rejectionReason.substring(0, 150) + "…" : a.rejectionReason;
         notifications.notify(a.user.id, "ARTISAN_REJECTED", null, null, null, note);
         log(admin, "ARTISAN_REJECTED", "USER", a.user.id, a.user.fullName + " · " + note);
+        return artisanFile(artisanId);
+    }
+
+    /** An approved artisan's changes to what clients see: applied, or dropped with a reason. */
+    public ma.sanai3i.dto.AdminDto.ArtisanReview approveChanges(AuthUser admin, Long artisanId) {
+        ArtisanProfile a = findArtisan(artisanId);
+        java.util.Map<String, Object> pending = artisanService.pendingOf(a);
+        if (pending.isEmpty()) {
+            throw new ApiException(HttpStatus.CONFLICT, "NO_CHANGES");
+        }
+        artisanService.apply(a, pending);
+        a.pendingChanges = null;
+        a.pendingSince = null;
+        notifications.notify(a.user.id, "ARTISAN_CHANGES_APPROVED", null, null, null, null);
+        log(admin, "ARTISAN_CHANGES_APPROVED", "USER", a.user.id, String.join(",", pending.keySet()));
+        return artisanFile(artisanId);
+    }
+
+    public ma.sanai3i.dto.AdminDto.ArtisanReview rejectChanges(AuthUser admin, Long artisanId, String reason) {
+        ArtisanProfile a = findArtisan(artisanId);
+        if (a.pendingChanges == null) {
+            throw new ApiException(HttpStatus.CONFLICT, "NO_CHANGES");
+        }
+        if (isBlank(reason)) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "REASON_REQUIRED");
+        }
+        a.pendingChanges = null;
+        a.pendingSince = null;
+        String note = reason.trim().length() > 150 ? reason.trim().substring(0, 150) + "…" : reason.trim();
+        notifications.notify(a.user.id, "ARTISAN_CHANGES_REJECTED", null, null, null, note);
+        log(admin, "ARTISAN_CHANGES_REJECTED", "USER", a.user.id, note);
+        return artisanFile(artisanId);
+    }
+
+    /** Takes an approved artisan off the platform: no requests, no offers, no public page. */
+    public ma.sanai3i.dto.AdminDto.ArtisanReview suspendArtisan(AuthUser admin, Long artisanId, String reason) {
+        ArtisanProfile a = findArtisan(artisanId);
+        if (a.status != ma.sanai3i.domain.ArtisanStatus.APPROVED) {
+            throw new ApiException(HttpStatus.CONFLICT, "NOT_APPROVED");
+        }
+        if (isBlank(reason)) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "REASON_REQUIRED");
+        }
+        a.status = ma.sanai3i.domain.ArtisanStatus.SUSPENDED;
+        a.suspendedReason = reason.trim();
+        a.featuredUntil = null;
+        notifications.notify(a.user.id, "ARTISAN_SUSPENDED", null, null, null, a.suspendedReason);
+        log(admin, "ARTISAN_SUSPENDED", "USER", a.user.id, a.user.fullName + " · " + a.suspendedReason);
+        return artisanFile(artisanId);
+    }
+
+    public ma.sanai3i.dto.AdminDto.ArtisanReview reinstateArtisan(AuthUser admin, Long artisanId) {
+        ArtisanProfile a = findArtisan(artisanId);
+        if (a.status != ma.sanai3i.domain.ArtisanStatus.SUSPENDED) {
+            throw new ApiException(HttpStatus.CONFLICT, "NOT_SUSPENDED");
+        }
+        a.status = ma.sanai3i.domain.ArtisanStatus.APPROVED;
+        a.suspendedReason = null;
+        notifications.notify(a.user.id, "ARTISAN_APPROVED", null, null, null, null);
+        log(admin, "ARTISAN_REINSTATED", "USER", a.user.id, a.user.fullName);
         return artisanFile(artisanId);
     }
 

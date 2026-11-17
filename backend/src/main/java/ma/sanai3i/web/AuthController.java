@@ -27,7 +27,10 @@ public class AuthController {
     private final AuthService auth;
     private final OtpService otp;
 
-    public AuthController(AuthService auth, OtpService otp) {
+    private final ma.sanai3i.security.TokenRevocations revocations;
+
+    public AuthController(AuthService auth, OtpService otp, ma.sanai3i.security.TokenRevocations revocations) {
+        this.revocations = revocations;
         this.auth = auth;
         this.otp = otp;
     }
@@ -63,5 +66,24 @@ public class AuthController {
     @GetMapping("/me")
     public UserDto me(@AuthenticationPrincipal AuthUser me) {
         return auth.me(me);
+    }
+
+    /** Signs out this token (the app forgets it too). */
+    @PostMapping("/auth/logout")
+    public org.springframework.http.ResponseEntity<Void> logout(
+            @org.springframework.security.core.annotation.AuthenticationPrincipal ma.sanai3i.security.AuthUser me) {
+        auth.logout(me, revocations);
+        return org.springframework.http.ResponseEntity.noContent().build();
+    }
+
+    /** Signs out every device of this account. */
+    @PostMapping("/auth/logout-all")
+    public org.springframework.http.ResponseEntity<Void> logoutAll(
+            @org.springframework.security.core.annotation.AuthenticationPrincipal ma.sanai3i.security.AuthUser me) {
+        if (me == null) {
+            throw new ma.sanai3i.common.ApiException(org.springframework.http.HttpStatus.UNAUTHORIZED, "UNAUTHORIZED");
+        }
+        auth.logoutAll(me);
+        return org.springframework.http.ResponseEntity.noContent().build();
     }
 }

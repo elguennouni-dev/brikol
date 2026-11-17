@@ -53,7 +53,9 @@ export default function Me() {
       </Screen>
     );
   }
-  const logout = async () => { await dropPush(); setAuth(null, null); toast(t('logout')); location.hash = '#/'; };
+  // the server forgets this token too (logout), or every token of the account (lost phone)
+  const logout = async () => { await dropPush(); try { await api('/auth/logout', { method: 'POST' }); } catch (e) { /* offline: forget it here anyway */ } setAuth(null, null); toast(t('logout')); location.hash = '#/'; };
+  const logoutAll = async () => { await dropPush(); await api('/auth/logout-all', { method: 'POST' }); setAuth(null, null); toast(t('logoutAllDone')); location.hash = '#/'; };
   return (
     <Screen tab="me" width="narrow">
       <PageHead title={t('meTitle')} />
@@ -78,6 +80,7 @@ export default function Me() {
       ) : null}
       {langSeg}
       <button className="btn ghost block" onClick={() => guarded(logout)}>{t('logout')}</button>
+      <button className="link" style={{ alignSelf: 'center' }} onClick={() => guarded(logoutAll)}>{t('logoutAll')}</button>
       {isArtisan() || isAdmin() ? null : <ArtisanCta onClick={() => setAuth(null, null)} />}
     </Screen>
   );

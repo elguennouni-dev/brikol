@@ -60,6 +60,11 @@ public class BillingService {
         this.audit = audit;
     }
 
+    /** True when the artisan may receive work now (no monetization, trial not started yet, or paid up). */
+    public boolean canWork(ArtisanProfile a) {
+        return !settings.monetizationEnabled() || a.subscriptionUntil == null || a.subscriptionUntil.isAfter(Instant.now());
+    }
+
     /** Called before an artisan sends an offer. Starts the free trial the first time. */
     public void requireActive(ArtisanProfile a) {
         if (!settings.monetizationEnabled()) {

@@ -90,9 +90,7 @@ public class StaffService {
         User u = new User();
         u.phone = phone;
         u.fullName = in.fullName().trim().length() > 120 ? in.fullName().trim().substring(0, 120) : in.fullName().trim();
-        if (in.password() == null || in.password().length() < 8 || in.password().getBytes(java.nio.charset.StandardCharsets.UTF_8).length > 72) {
-            throw new ApiException(HttpStatus.BAD_REQUEST, "PASSWORD_WEAK");
-        }
+        AuthService.checkPassword(in.password());
         u.passwordHash = encoder.encode(in.password());
         u.role = Role.ADMIN;
         u.city = "Casablanca";

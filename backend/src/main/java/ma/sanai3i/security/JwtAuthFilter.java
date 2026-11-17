@@ -18,8 +18,10 @@ import java.util.Optional;
 public class JwtAuthFilter extends OncePerRequestFilter {
     private final JwtService jwt;
     private final BlockList blocked;
+    private final TokenRevocations revocations;
 
-    public JwtAuthFilter(JwtService jwt, BlockList blocked) {
+    public JwtAuthFilter(JwtService jwt, BlockList blocked, TokenRevocations revocations) {
+        this.revocations = revocations;
         this.jwt = jwt;
         this.blocked = blocked;
     }
@@ -39,7 +41,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                     response.getWriter().write("{\"code\":\"ACCOUNT_BLOCKED\"}");
                     return;
                 }
-                if (!blocked.tokenValid(user.userId(), user.tokenVersion())) {
+                if (!blocked.tokenValid(user.userId(), user.tokenVersion()) || revocations.isRevoked(user.tokenId())) {
                     response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
                     response.setContentType("application/json");
                     response.setCharacterEncoding(StandardCharsets.UTF_8.name());
