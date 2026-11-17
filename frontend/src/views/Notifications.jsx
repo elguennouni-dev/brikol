@@ -5,7 +5,7 @@ export default function Notifications() {
   const { items, unread, live } = useNotifs();
   const st = useAsync(async () => { await refreshNotifs(); return true; }, []);
   return (
-    <Screen tab="me" width="narrow">
+    <Screen tab="alerts" width="narrow">
       <div className="row between g12">
         <div className="row g12"><BackButton onClick={back} /><h1 className="h1" style={{ fontSize: 22 }}>{t('notifTitle')}</h1>{live ? <span className="pill pill-ok">{t('notifLive')}</span> : null}</div>
         {unread > 0 ? <button className="link" onClick={markAllRead}>{t('notifReadAll')}</button> : null}

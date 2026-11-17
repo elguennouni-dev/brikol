@@ -2,6 +2,15 @@ import { A } from './i18n-admin';
 /* Texts of the app in Darija (ar) and French (fr). Placeholders look like {name}. */
 export const T = {
   ar: {
+    artHeroTitle: 'كاين كليان كيتسناوك', artHeroSub: 'شوف الطلبات الجديدة فالحرفة ديالك وصيفط الثمن ديالك.', artHeroBtn: 'شوف الطلبات',
+    whyTitle: 'علاش بريكول؟',
+    f1t: 'صوّر ولا سجّل', f1d: 'تصويرة، فيديو ولا ميساج صوتي، وما تحتاجش تكتب بزاف.',
+    f2t: 'غير اللي قراب ليك', f2d: 'كيشوفو طلبك غير صنايعية الحرفة ديالك فالمنطقة ديالك.',
+    f3t: 'صنايعية موثّقين', f3d: 'كل صنايعي كنراجعو البطاقة والخدمة ديالو قبل ما يخدم.',
+    f4t: 'نتا اللي كتحدد الثمن', f4d: 'قارن العروض، تفاوض، وقبل اللي عجبك.',
+    proTitle: 'واش نتا صنايعي؟', proText: 'سجل فبريكول ووصلو ليك خدمات قراب ليك كل نهار.', proBtn: 'دخل كصنايعي',
+    artTipTitle: 'نصيحة', artTipText: 'جاوب بسرعة وحط ثمن واضح، الكليان كيختارو اللي كيجاوب الأول.',
+    nav_alerts: 'التنبيهات',
     dh: 'درهم', from: 'من', city: 'الدار البيضاء',
     hello: 'مرحبا {name}', helloGuest: 'مرحبا بيك', otherLang: 'Français', switchLang: 'Changer la langue',
     search: 'على شنو كتقلب؟ صباغ، نجار، بلومبي…',
@@ -56,6 +65,15 @@ export const T = {
     n_REQUEST_CANCELLED: '{name} لغى الطلب', n_JOB_DONE: '{name} أكد أن الخدمة تكملات', n_REVIEW_RECEIVED: 'توصلتي بتقييم {v}★ من {name}',
   },
   fr: {
+    artHeroTitle: 'Des clients vous attendent', artHeroSub: 'Consultez les nouvelles demandes de votre métier et envoyez votre prix.', artHeroBtn: 'Voir les demandes',
+    whyTitle: 'Pourquoi Brikol ?',
+    f1t: 'Photo, vidéo ou vocal', f1d: 'Montrez le problème au lieu de l’écrire.',
+    f2t: 'Seulement des artisans proches', f2d: 'Votre demande est vue par les artisans de ce métier, dans votre zone.',
+    f3t: 'Artisans vérifiés', f3d: 'Pièce d’identité et réalisations vérifiées par notre équipe.',
+    f4t: 'Vous gardez la main sur le prix', f4d: 'Comparez les offres, négociez, choisissez.',
+    proTitle: 'Vous êtes artisan ?', proText: 'Inscrivez-vous et recevez chaque jour des demandes près de chez vous.', proBtn: 'Devenir artisan Brikol',
+    artTipTitle: 'Astuce', artTipText: 'Répondez vite avec un prix clair : les clients choisissent souvent la première bonne offre.',
+    nav_alerts: 'Alertes',
     dh: 'DH', from: 'Dès', city: 'Casablanca',
     hello: 'Bonjour {name}', helloGuest: 'Bienvenue', otherLang: 'الدارجة', switchLang: 'تبديل اللغة',
     search: 'Que cherchez-vous ? Peintre, plombier…',

@@ -2,7 +2,6 @@ import { useEffect } from 'react';
 import { api, useHash, parseRoute, useSession, setAuth, setNext, isArtisan, isAdmin, artisanReady, refreshMe, startLive, stopLive, loadConfig } from './session';
 import { Toast, Loader } from './ui';
 import Home from './views/Home';
-import Explore from './views/Explore';
 import Artisan from './views/Artisan';
 import NewRequest from './views/NewRequest';
 import Requests from './views/Requests';
@@ -17,7 +16,7 @@ import Plan from './views/Plan';
 import { syncPush } from './push';
 import { useConfig } from './session';
 
-const VIEWS = { home: Home, explore: Explore, artisan: Artisan, new: NewRequest, requests: Requests, jobs: Jobs, me: Me, login: Login, notifications: Notifications, admin: Admin, onboarding: Onboarding, chat: Chat, plan: Plan };
+const VIEWS = { home: Home, artisan: Artisan, new: NewRequest, requests: Requests, jobs: Jobs, me: Me, login: Login, notifications: Notifications, admin: Admin, onboarding: Onboarding, chat: Chat, plan: Plan };
 
 function guard(name, token, user) {
   if ((name === 'new' || name === 'requests' || name === 'jobs' || name === 'notifications') && !token) { setNext(location.hash || '#/'); return '#/login'; }
@@ -38,7 +37,8 @@ export default function App() {
   const { token, user } = useSession();
   const r = parseRoute(hash);
   const name = VIEWS[r.name] ? r.name : 'home';
-  const redirect = guard(name, token, user);
+  // The artisan directory was removed: clients only meet artisans through the offers they receive.
+  const redirect = r.name === 'explore' ? '#/' : guard(name, token, user);
 
   useEffect(() => { if (redirect) location.replace(redirect); }, [redirect]);
   useEffect(() => { loadConfig(); refreshMe(); }, []);

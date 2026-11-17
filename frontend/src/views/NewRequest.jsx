@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { api, getCats, useAsync, guarded, toast, t, L, fmt, back, useSession } from '../session';
+import { api, getCats, useAsync, guarded, toast, t, L, fmt, back, useSession, parseRoute } from '../session';
 import { LocationSheet, MapPreview } from '../places';
 import { centerOf } from '../geo';
 import { MediaPicker } from '../media';
@@ -11,7 +11,12 @@ const blank = () => ({ cat: 'paint', desc: '', hood: '', when: 'WEEK', budget: '
 let draft = blank();
 
 export default function NewRequest() {
-  const [f, setF] = useState(draft);
+  // Coming from a service tile on the home screen: #/new?cat=plumb
+  const [f, setF] = useState(() => {
+    const c = parseRoute(location.hash).q.get('cat');
+    if (c && c !== draft.cat) draft = { ...draft, cat: c };
+    return draft;
+  });
   const [busy, setBusy] = useState(false);
   const [picking, setPicking] = useState(false);
   const { user } = useSession();

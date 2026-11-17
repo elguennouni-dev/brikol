@@ -139,7 +139,7 @@ export function Nav({ active }) {
   return (
     <nav className="nav">
       <Item id="home" href="#/" icon="home" label={t('nav_home')} />
-      <Item id="explore" href="#/explore" icon="compass" label={t('nav_explore')} />
+      <Item id="alerts" href="#/notifications" icon="bell" label={t('nav_alerts')} />
       <div className="plus">
         {art
           ? <a href="#/jobs" aria-label={t('nav_jobs')}><Icon name="clip" size={26} /></a>
@@ -231,7 +231,6 @@ export function TopBar() {
         <a className="tb-brand" href="#/" aria-label="Brikol"><img src="/app/brand/logo.png" alt="Brikol" /></a>
         <nav className="tb-links">
           {link('#/', t('nav_home'), name === 'home')}
-          {link('#/explore', t('nav_explore'), name === 'explore' || name === 'artisan')}
           {isAdmin() ? link('#/admin', t('a_open'), name === 'admin') : null}
           {token && !isAdmin() ? (art ? link('#/jobs', t('nav_jobs'), name === 'jobs') : link('#/requests', t('nav_req'), name === 'requests')) : null}
         </nav>
