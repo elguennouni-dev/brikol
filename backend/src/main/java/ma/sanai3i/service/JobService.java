@@ -57,7 +57,7 @@ public class JobService {
     public record JobView(Long requestId, String status, String myRole, String categoryCode, String categoryNameAr,
                           String categoryNameFr, String description, String otherName, String otherPhone, Long artisanId,
                           int agreedPrice, int extras, int advances, int total, int remaining,
-                          Instant appointmentAt, boolean appointmentConfirmed,
+                          Instant appointmentAt, String appointmentBy, boolean appointmentConfirmed,
                           Instant arrivedAt, Instant finishedAt, Instant doneAt, String doneBy, Instant warrantyUntil,
                           /** Only for the client, while the job is open. */
                           String code, boolean codeLocked, int codeTriesLeft,
@@ -128,7 +128,7 @@ public class JobService {
         return new JobView(r.id, r.status.name(), s.role(), r.category.code, r.category.nameAr, r.category.nameFr, r.description,
                 Mapper.shortName(s.other().fullName), s.other().phone, s.offer().artisan.id,
                 agreed, extras, advances, agreed + extras, Math.max(0, agreed + extras - advances),
-                r.appointmentAt, r.appointmentConfirmed, r.arrivedAt, r.finishedAt, r.doneAt, r.doneBy, r.warrantyUntil,
+                r.appointmentAt, r.appointmentBy, r.appointmentConfirmed, r.arrivedAt, r.finishedAt, r.doneAt, r.doneBy, r.warrantyUntil,
                 showCode ? r.doneCode : null, r.codeAttempts >= CODE_TRIES, Math.max(0, CODE_TRIES - r.codeAttempts),
                 itemDtos, media.ofRequest(r.id, Media.JOB_BEFORE), media.ofRequest(r.id, Media.JOB_AFTER), caseDtos,
                 strikes.recent(s.other().id), s.client() && r.status == RequestStatus.DONE && reviews.existsByRequestId(r.id));

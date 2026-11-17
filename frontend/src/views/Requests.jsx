@@ -63,7 +63,6 @@ function RequestCard({ r, reload, goDone }) {
     guarded(async () => { await api('/requests/' + r.id + '/' + path, { method: 'POST' }); after(); });
   };
   const cancel = () => confirmed('cancel', 'cancel', () => { toast(t('cancelled')); reload(); });
-  const complete = () => confirmed('complete', 'complete', () => { goDone(); });
 
   const o0 = (r.offers || [])[0];
   let body = null;
@@ -111,8 +110,9 @@ function RequestCard({ r, reload, goDone }) {
           {o0 && o0.artisanPhone ? <a className="btn ghost" style={{ flex: 1 }} href={`tel:${o0.artisanPhone}`}><Icon name="phone" size={18} />{t('call')}</a> : null}
         </div>
         <Appointment requestId={r.id} at={r.appointmentAt} by={r.appointmentBy} confirmed={r.appointmentConfirmed} myRole="CLIENT" status={r.status} onChange={reload} />
+        <a className="btn dark" href={`#/job/${r.id}`}><Icon name="shield" size={18} />{t('j_open')} · {t('j_yourCode')}</a>
         <div className="row between g10">
-          <button className="btn sm dark" onClick={complete}>{sure('complete', t('markDone'))}</button>
+          <span />
           <button className="link danger" onClick={cancel}>{sure('cancel', t('cancelReq'))}</button>
         </div>
       </>
@@ -122,6 +122,7 @@ function RequestCard({ r, reload, goDone }) {
       <>
         {r.reviewed ? <div className="note ok">{t('reviewedMsg')}</div> : <ReviewForm r={r} onDone={reload} />}
         <div className="row g12 wrap">
+          <a className="link" href={`#/job/${r.id}`}>{t('j_open')} · {t('j_warranty')}</a>
           <a className="link" href={`#/chat/${r.id}`}>{t('chat')}</a>
           {o0 ? <ReportButton targetType="ARTISAN" targetId={o0.artisanId} /> : null}
         </div>

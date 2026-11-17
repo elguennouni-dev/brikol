@@ -180,14 +180,27 @@ export const useNotifs = () => useSyncExternalStore(nsub, () => nstate);
 export function notifText(n) {
   const name = snap.lang === 'ar' ? (n.actorAr || n.actorFr || '') : (n.actorFr || n.actorAr || '');
   if (n.kind && n.kind.startsWith('APPOINTMENT_') && n.detail) n = { ...n, detail: new Date(n.detail).toLocaleString(snap.lang === 'ar' ? 'ar-MA-u-nu-latn' : 'fr-FR', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) };
-  const v = (n.kind === 'OFFER_RECEIVED' || n.kind === 'OFFER_COUNTERED' || n.kind === 'OFFER_AGREED') ? money(n.detail) : (n.detail || (n.requestId ? '#' + n.requestId : ''));
+  if (n.kind === 'JOB_FINISHED' && n.detail) {
+    const [amount, code] = n.detail.split('|');
+    return t('n_JOB_FINISHED', { name, v: money(amount), c: code || '' });
+  }
+  if (n.kind === 'ACCOUNT_SUSPENDED' && n.detail) n = { ...n, detail: new Date(n.detail).toLocaleDateString(snap.lang === 'ar' ? 'ar-MA-u-nu-latn' : 'fr-FR') };
+  if (n.kind === 'STRIKE_GIVEN' && n.detail) n = { ...n, detail: t('sr_' + n.detail) };
+  if (n.kind === 'CASE_NEW' && n.detail) n = { ...n, detail: hasKey('pr_' + n.detail) ? t('pr_' + n.detail) : n.detail };
+  const moneyKinds = ['OFFER_RECEIVED', 'OFFER_COUNTERED', 'OFFER_AGREED', 'EXTRA_PROPOSED', 'ADVANCE_DECLARED', 'ITEM_ACCEPTED', 'ITEM_REFUSED'];
+  const v = moneyKinds.includes(n.kind) ? money(n.detail) : (n.detail || (n.requestId ? '#' + n.requestId : ''));
   return t('n_' + n.kind, { name, v, cat: catName(n.detail) });
 }
+const JOB_KINDS = ['OFFER_ACCEPTED', 'OFFER_AGREED', 'ARTISAN_ARRIVED', 'JOB_FINISHED', 'JOB_DONE', 'JOB_DONE_CODE', 'JOB_CLOSED',
+  'JOB_CLOSED_ADMIN', 'EXTRA_PROPOSED', 'ADVANCE_DECLARED', 'ITEM_ACCEPTED', 'ITEM_REFUSED', 'WARRANTY_OPENED', 'WARRANTY_FIXED',
+  'WARRANTY_NOT_FIXED', 'CASE_RESOLVED'];
 export function notifHref(n) {
   if (n.kind === 'ANNOUNCEMENT') return '#/notifications';
   if (n.kind === 'ARTISAN_APPROVED' || n.kind === 'ARTISAN_REJECTED') return '#/onboarding';
   if (n.kind === 'ARTISAN_SUBMITTED') return '#/admin/files';
   if (n.kind === 'REPORT_CREATED') return '#/admin/reports';
+  if (n.kind === 'CASE_NEW') return '#/admin/cases';
+  if (JOB_KINDS.includes(n.kind) && n.requestId) return '#/job/' + n.requestId;
   if (n.kind && n.kind.startsWith('APPOINTMENT_') && n.requestId) return '#/chat/' + n.requestId;
   if (n.kind && n.kind.startsWith('SUBSCRIPTION_')) return '#/plan';
   if (n.kind === 'NEW_REQUEST') return '#/jobs';

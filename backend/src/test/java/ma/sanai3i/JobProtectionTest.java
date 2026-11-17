@@ -192,7 +192,7 @@ class JobProtectionTest {
         }
         mvc.perform(get("/api/me").header("Authorization", bad)).andExpect(jsonPath("$.suspendedUntil", matchesPattern(".+")));
         mvc.perform(post("/api/requests").header("Authorization", bad).contentType(JSON)
-                        .content("{\"categoryCode\":\"paint\",\"description\":\"Test\",\"budget\":1000}"))
+                        .content("{\"categoryCode\":\"paint\",\"description\":\"Peindre une chambre\",\"budget\":1000,\"lat\":33.5899,\"lng\":-7.6039}"))
                 .andExpect(status().isForbidden()).andExpect(jsonPath("$.code").value("ACCOUNT_SUSPENDED"));
     }
 }

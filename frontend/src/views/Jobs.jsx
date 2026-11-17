@@ -100,6 +100,7 @@ function JobCard({ x, reload }) {
               {x.clientPhone ? <a className="btn ghost" style={{ flex: 1 }} href={`tel:${x.clientPhone}`}><Icon name="phone" size={18} />{x.clientName}</a> : null}
             </div>
             <Appointment requestId={x.id} at={x.appointmentAt} by={x.appointmentBy} confirmed={x.appointmentConfirmed} myRole="ARTISAN" status={x.status} onChange={reload} />
+            <a className="btn dark big" href={`#/job/${x.id}`}><Icon name="check" size={20} />{t('j_open')}</a>
           </>
         ) : null}
         {mine.status === 'ACCEPTED' && x.status === 'DONE' && !x.clientReviewedByMe ? <RateClient x={x} reload={reload} /> : null}

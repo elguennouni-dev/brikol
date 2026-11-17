@@ -264,7 +264,14 @@ export function SiteFooter() {
 // On a phone the shell is invisible (display: contents) and the layout is the same as before.
 export function SiteBanner() {
   const { bannerMessage } = useConfig();
-  return bannerMessage ? <div className="site-banner" role="status"><Icon name="bell" size={16} />{bannerMessage}</div> : null;
+  const { user, lang } = useSession();
+  const until = user && user.suspendedUntil && new Date(user.suspendedUntil) > new Date() ? new Date(user.suspendedUntil) : null;
+  return (
+    <>
+      {bannerMessage ? <div className="site-banner" role="status"><Icon name="bell" size={16} />{bannerMessage}</div> : null}
+      {until ? <div className="suspended" role="status"><Icon name="flag" size={18} /><span>{t('j_suspended', { d: until.toLocaleDateString(lang === 'ar' ? 'ar-MA-u-nu-latn' : 'fr-FR') })}</span></div> : null}
+    </>
+  );
 }
 
 export function Screen({ children, bar, tab, nav = true, flush = false, width = 'wide' }) {

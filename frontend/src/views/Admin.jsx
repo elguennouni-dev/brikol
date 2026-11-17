@@ -1,15 +1,15 @@
 import { useState } from 'react';
-import { api, useAsync, useSession, isAdmin, isOwner, can, guarded, toast, t, L, fmt, ago, getSession } from '../session';
+import { api, useAsync, useSession, isAdmin, isOwner, can, guarded, toast, t, L, fmt, ago, getSession, money } from '../session';
 import { RequestPlace, MapPreview } from '../places';
 import { MediaGallery, PrivateImg, Lightbox } from '../media';
 import { Screen, Icon, Gate, Skeleton, Empty, BackButton } from '../ui';
 
 // [route, label, who may open it]
-const SECTIONS = [['', 'a_dash', () => true], ['files', 'a_files', () => can('FILES')], ['reports', 'a_reports', () => can('REPORTS')],
+const SECTIONS = [['', 'a_dash', () => true], ['files', 'a_files', () => can('FILES')], ['cases', 'a_cases', () => can('REPORTS')], ['reports', 'a_reports', () => can('REPORTS')],
   ['users', 'a_users', () => can('USERS')], ['requests', 'a_requests', () => can('REQUESTS')], ['reviews', 'a_reviews', () => can('REQUESTS')],
   ['categories', 'a_cats', () => can('CATEGORIES')], ['audit', 'a_audit', () => can('AUDIT')],
   ['tools', 'a_tools', () => can('BILLING') || can('BROADCAST') || can('SETTINGS') || can('USERS') || can('REQUESTS')], ['team', 'a_team', () => isOwner()]];
-const ALLOWED = { file: 'files', user: 'users', request: 'requests' };
+const ALLOWED = { file: 'files', user: 'users', request: 'requests', case: 'cases' };
 const STATUS_PILL = { OPEN: 'pill-lime', ACCEPTED: 'pill-warn', DONE: 'pill-ok', CANCELLED: 'pill-mute' };
 const statusLabel = (s) => t('a_status' + s.charAt(0) + s.slice(1).toLowerCase());
 const qs = (o) => Object.entries(o).filter(([, v]) => v !== '' && v != null).map(([k, v]) => k + '=' + encodeURIComponent(v)).join('&');
@@ -213,6 +213,7 @@ function UserDetail({ id }) {
               {d.recentRequests.map((r) => <RequestLine key={r.id} r={r} />)}
             </div>
           ) : null}
+          {u.role !== 'ADMIN' && can('REPORTS') ? <UserStrikes userId={u.id} /> : null}
           {d.activity.length ? (
             <div className="card col g8">
               <b>{t('a_activity')}</b>
@@ -471,6 +472,181 @@ function Reports() {
         </div>
       ) : <Empty>{t('a_noResults')}</Empty>)}</Gate>
     </>
+  );
+}
+
+// ------------------------------------------------------------ problems between clients and artisans
+const STRIKE_REASONS = ['NO_SHOW', 'LATE_CANCEL', 'UNPAID', 'CLIENT_ABSENT', 'WARRANTY_IGNORED', 'BAD_WORK', 'BEHAVIOR', 'OTHER'];
+const CASE_PILL = { OPEN: 'pill-warn', ESCALATED: 'pill-warn', FIXED: 'pill-lime', RESOLVED: 'pill-ok' };
+
+function Cases() {
+  const [status, setStatus] = useState('open');
+  const st = useAsync(() => api('/admin/cases?status=' + status), [status], { live: true });
+  return (
+    <>
+      <div className="row g6 wrap">{[['open', 'a_casesOpen'], ['all', 'a_casesAll']].map(([s, k]) => <button key={s} className={`chip ${status === s ? 'on' : ''}`} onClick={() => setStatus(s)}>{t(k)}</button>)}</div>
+      <Gate st={st} loader={<Skeleton rows={4} />}>{(list) => (list.length ? (
+        <div className="col g10">
+          {list.map((c) => (
+            <a key={c.id} className="card col g6" href={`#/admin/case/${c.id}`} style={{ textDecoration: 'none' }}>
+              <div className="row between g8 wrap">
+                <b>{c.kind === 'WARRANTY' ? t('j_warranty') + ' · ' : ''}{t('pr_' + c.reason)}</b>
+                <span className={`pill ${CASE_PILL[c.status] || 'pill-mute'}`}>{t('cs_' + c.status)}</span>
+              </div>
+              <span className="small">{catLabel(c)} · {c.clientName} ↔ {c.artisanName || '—'}</span>
+              <span className="muted xs">{t('a_openedBy')}: {c.openedByName} ({t('a_role_' + c.openedRole)}) · {when(c.createdAt)} · #{c.requestId}</span>
+              {c.details ? <span className="small" dir="auto" style={{ color: 'var(--ink-2)' }}>{c.details}</span> : null}
+            </a>
+          ))}
+        </div>
+      ) : <Empty>{t('a_noResults')}</Empty>)}</Gate>
+    </>
+  );
+}
+
+function StrikeList({ party, onChange }) {
+  const [reason, setReason] = useState('');
+  const add = () => guarded(async () => { await api('/admin/users/' + party.userId + '/strikes', { method: 'POST', body: { reason } }); setReason(''); toast(t('a_done')); onChange(); });
+  const remove = (s) => guarded(async () => { await api('/admin/strikes/' + s.id, { method: 'DELETE' }); toast(t('a_done')); onChange(); });
+  return (
+    <div className="col g8">
+      <span className="row g6 wrap">
+        <span className={`pill ${party.recentStrikes ? 'pill-warn' : 'pill-ok'}`}>{t('a_strikesN', { n: party.recentStrikes })}</span>
+        {party.suspendedUntil ? <span className="pill pill-warn">{t('a_suspendedUntil', { d: when(party.suspendedUntil) })}</span> : null}
+      </span>
+      {party.strikes.map((s) => (
+        <div key={s.id} className="row between g8 small" style={{ opacity: s.removed ? 0.5 : 1 }}>
+          <span>{t('sr_' + s.reason)}{s.automatic ? ' · ' + t('a_auto') : ''} · <span className="muted">{when(s.createdAt)}</span>{s.requestId ? <> · <a className="link" href={`#/admin/request/${s.requestId}`}>#{s.requestId}</a></> : null}</span>
+          {s.removed ? null : <button className="link danger" onClick={() => remove(s)}>{t('a_removeStrike')}</button>}
+        </div>
+      ))}
+      <div className="row g8 wrap">
+        <select className="select" style={{ flex: '1 1 180px', width: 'auto' }} value={reason} onChange={(e) => setReason(e.target.value)}>
+          <option value="">{t('a_addStrike')}…</option>
+          {STRIKE_REASONS.map((r) => <option key={r} value={r}>{t('sr_' + r)}</option>)}
+        </select>
+        <button className="btn sm ghost" disabled={!reason} onClick={add}>{t('a_addStrike')}</button>
+      </div>
+    </div>
+  );
+}
+
+function UserStrikes({ userId }) {
+  const st = useAsync(() => api('/admin/users/' + userId + '/strikes'), [userId]);
+  return (
+    <div className="card col g10">
+      <b>{t('a_strikes')}</b>
+      <Gate st={st} loader={<Skeleton rows={1} />}>{(p) => <StrikeList party={p} onChange={st.reload} />}</Gate>
+    </div>
+  );
+}
+
+function CaseDetail({ id }) {
+  const st = useAsync(() => api('/admin/cases/' + id), [id]);
+  const [note, setNote] = useState('');
+  const [sc, setSc] = useState('');
+  const [sa, setSa] = useState('');
+  const [close, setClose] = useState(false);
+  const handle = (status) => guarded(async () => {
+    await api('/admin/cases/' + id, { method: 'POST', body: { status, resolution: note || null, strikeClient: sc || null, strikeArtisan: sa || null, closeJob: close } });
+    toast(t('a_done'));
+    setSc(''); setSa(''); setClose(false);
+    st.reload();
+  });
+  return (
+    <Gate st={st} loader={<Skeleton rows={6} />}>{(d) => {
+      const c = d.row;
+      const open = c.status !== 'RESOLVED';
+      const party = (p, role) => (p ? (
+        <div className="card col g8">
+          <div className="row between g8 wrap">
+            <b>{t('a_role_' + role)} · <a className="link" href={`#/admin/user/${p.userId}`}>{p.name}</a></b>
+            <a className="btn sm ghost" href={`tel:${p.phone}`} dir="ltr"><Icon name="phone" size={16} />{p.phone}</a>
+          </div>
+          <StrikeList party={p} onChange={st.reload} />
+        </div>
+      ) : null);
+      const timeline = [['a_t_appt', d.acceptedAppointment ? when(d.acceptedAppointment) + (d.appointmentConfirmed ? ' ✓' : '') : null],
+        ['a_t_arrived', d.arrivedAt && when(d.arrivedAt)], ['a_t_finished', d.finishedAt && when(d.finishedAt)],
+        ['a_t_done', d.doneAt && when(d.doneAt) + ' · ' + t('j_doneBy_' + d.doneBy)], ['a_t_warranty', d.warrantyUntil && when(d.warrantyUntil)]];
+      const extras = d.items.filter((i) => i.kind === 'EXTRA' && i.status === 'ACCEPTED').reduce((a, i) => a + i.amount, 0);
+      const advances = d.items.filter((i) => i.kind === 'ADVANCE' && i.status === 'ACCEPTED').reduce((a, i) => a + i.amount, 0);
+      return (
+        <div className="col g12">
+          <div className="card col g8">
+            <div className="row between g8 wrap">
+              <b style={{ fontSize: 18 }}>{c.kind === 'WARRANTY' ? t('j_warranty') + ' · ' : ''}{t('pr_' + c.reason)}</b>
+              <span className={`pill ${CASE_PILL[c.status] || 'pill-mute'}`}>{t('cs_' + c.status)}</span>
+            </div>
+            <span className="small">{t('a_openedBy')}: {c.openedByName} ({t('a_role_' + c.openedRole)}) · {when(c.createdAt)}</span>
+            {c.details ? <p className="small" dir="auto" style={{ margin: 0 }}>{c.details}</p> : null}
+            {d.mediaUrl ? <a href={d.mediaUrl} target="_blank" rel="noreferrer"><img src={d.mediaUrl} alt="" style={{ width: 120, height: 120, objectFit: 'cover', borderRadius: 12 }} /></a> : null}
+            {d.resolution ? <div className="note ok"><span dir="auto">{d.resolution}</span></div> : null}
+          </div>
+
+          <div className="cols2">
+            {party(d.client, 'CLIENT')}
+            {party(d.artisan, 'ARTISAN')}
+          </div>
+
+          <div className="card col g8">
+            <b>{t('a_caseDeal')}</b>
+            <span className="small">{catLabel(c)} · {d.city}{d.address ? ' · ' + d.address : ''} · <a className="link" href={`#/admin/request/${c.requestId}`}>#{c.requestId}</a></span>
+            <p className="small muted" dir="auto" style={{ margin: 0 }}>{d.description}</p>
+            <div className="dl-list small num">
+              <span>{t('j_agreed')}: <b>{money(d.agreedPrice)}</b></span>
+              <span>{t('j_extras')}: <b>+{money(extras)}</b></span>
+              <span>{t('j_advances')}: <b>−{money(advances)}</b></span>
+              <span>{t('j_remaining')}: <b>{money(d.agreedPrice + extras - advances)}</b></span>
+            </div>
+            {d.items.map((i) => <span key={i.id} className="xs muted">{t('jk_' + i.kind)} · {money(i.amount)}{i.label ? ' · ' + i.label : ''} · {t('a_role_' + i.createdBy)} · {t('is_' + i.status)} · {when(i.createdAt)}{i.mediaUrl ? <> · <a className="link" href={i.mediaUrl} target="_blank" rel="noreferrer">📎</a></> : null}</span>)}
+          </div>
+
+          <div className="card col g6">
+            <b>{t('a_timeline')}</b>
+            {timeline.map(([k, v]) => <span key={k} className="small">{t(k)}: <b>{v || '—'}</b></span>)}
+          </div>
+
+          {d.requestMedia.length || d.before.length || d.after.length ? (
+            <div className="card col g8">
+              {d.requestMedia.length ? <><b className="small">{t('a_requestMedia')}</b><MediaGallery media={d.requestMedia} /></> : null}
+              {d.before.length ? <><b className="small">{t('j_before')}</b><MediaGallery media={d.before} /></> : null}
+              {d.after.length ? <><b className="small">{t('j_after')}</b><MediaGallery media={d.after} /></> : null}
+            </div>
+          ) : null}
+
+          {d.otherCases.length ? (
+            <div className="card col g6">
+              <b className="small">{t('a_cases')}</b>
+              {d.otherCases.map((o) => <a key={o.id} className="small link" href={`#/admin/case/${o.id}`}>{t('pr_' + o.reason)} · {t('a_role_' + o.openedRole)} · {t('cs_' + o.status)}</a>)}
+            </div>
+          ) : null}
+
+          <div className="card col g6">
+            <b>{t('a_chatLog')}</b>
+            {d.chat.length ? d.chat.map((m, i) => <span key={i} className="small" dir="auto"><b>{t('a_role_' + m.from)}</b> · <span className="muted xs">{when(m.at)}</span><br />{m.body}</span>) : <span className="muted small">—</span>}
+          </div>
+
+          <div className="card col g10">
+            <span className="note wait"><Icon name="phone" size={18} />{t('a_callBoth')}</span>
+            <textarea className="area" rows={3} maxLength={500} value={note} onChange={(e) => setNote(e.target.value)} placeholder={t('a_resolution')} />
+            <div className="row g8 wrap">
+              <label className="col g4 grow"><span className="xs muted">{t('a_strikeClient')}</span>
+                <select className="select" value={sc} onChange={(e) => setSc(e.target.value)}><option value="">{t('a_none')}</option>{STRIKE_REASONS.map((r) => <option key={r} value={r}>{t('sr_' + r)}</option>)}</select>
+              </label>
+              <label className="col g4 grow"><span className="xs muted">{t('a_strikeArtisan')}</span>
+                <select className="select" value={sa} onChange={(e) => setSa(e.target.value)}><option value="">{t('a_none')}</option>{STRIKE_REASONS.map((r) => <option key={r} value={r}>{t('sr_' + r)}</option>)}</select>
+              </label>
+            </div>
+            {d.requestStatus === 'ACCEPTED' ? <label className="row g8 small"><input type="checkbox" checked={close} onChange={(e) => setClose(e.target.checked)} />{t('a_closeJob')}</label> : null}
+            <div className="row g8 wrap">
+              <button className="btn sm" onClick={() => handle('RESOLVED')}>{t('a_resolve')}</button>
+              {open ? <button className="btn sm ghost" onClick={() => handle('OPEN')}>{t('a_keepOpen')}</button> : null}
+            </div>
+          </div>
+        </div>
+      );
+    }}</Gate>
   );
 }
 
@@ -794,11 +970,13 @@ function Team() {
 export default function Admin({ route }) {
   useSession();
   const sec = route.id || '';
-  const detail = sec === 'user' || sec === 'request' || sec === 'file';
+  const detail = sec === 'user' || sec === 'request' || sec === 'file' || sec === 'case';
   let body;
   if (!isAdmin()) body = <Empty>{t('a_forbidden')}</Empty>;
   else if (sec === 'files') body = <Files />;
   else if (sec === 'reports') body = <Reports />;
+  else if (sec === 'cases') body = <Cases />;
+  else if (sec === 'case') body = <CaseDetail id={route.sub} />;
   else if (sec === 'file') body = <FileDetail id={route.sub} />;
   else if (sec === 'users') body = <Users />;
   else if (sec === 'user') body = <UserDetail id={route.sub} />;
@@ -812,11 +990,11 @@ export default function Admin({ route }) {
   else body = <Dashboard />;
   const sectionOk = (SECTIONS.find(([id]) => id === (ALLOWED[sec] || sec)) || SECTIONS[0])[2]();
   if (isAdmin() && !sectionOk) body = <Empty>{t('a_noPermission')}</Empty>;
-  const active = sec === 'user' ? 'users' : sec === 'request' ? 'requests' : sec === 'file' ? 'files' : sec;
+  const active = sec === 'user' ? 'users' : sec === 'request' ? 'requests' : sec === 'file' ? 'files' : sec === 'case' ? 'cases' : sec;
   return (
     <Screen tab="admin" width="wide">
       <div className="row g12">
-        {detail ? <BackButton onClick={() => { location.hash = sec === 'user' ? '#/admin/users' : sec === 'file' ? '#/admin/files' : '#/admin/requests'; }} /> : null}
+        {detail ? <BackButton onClick={() => { location.hash = sec === 'user' ? '#/admin/users' : sec === 'file' ? '#/admin/files' : sec === 'case' ? '#/admin/cases' : '#/admin/requests'; }} /> : null}
         <h1 className="h1" style={{ fontSize: 24 }}><Icon name="shield" size={22} /> {t('a_title')}</h1>
       </div>
       <nav className="atabs" aria-label={t('a_title')}>
