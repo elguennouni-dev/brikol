@@ -359,12 +359,14 @@ export default function Job({ route }) {
               <div className="note ok"><Icon name="check" size={18} /><span>{t('j_done')} · {t('j_doneBy_' + (j.doneBy || 'CLIENT'))}{j.doneAt ? ' · ' + fmtWhen(j.doneAt) : ''}</span></div>
             ) : null}
             {j.status === 'DONE' && j.myRole === 'CLIENT' && !j.reviewed ? <a className="btn" href="#/requests?tab=done"><Icon name="star" size={18} />{t('j_rate')}</a> : null}
-            <Deal j={j} />
-            <Items j={j} act={act} />
-            {open ? <Appointment requestId={j.requestId} at={j.appointmentAt} by={j.appointmentBy} confirmed={j.appointmentConfirmed} myRole={j.myRole} status={j.status} onChange={st.reload} /> : null}
+            {/* what this person has to do now comes first */}
+            {j.items.some((i) => i.canAnswer) ? <Items j={{ ...j, items: j.items.filter((i) => i.canAnswer) }} act={act} /> : null}
             {open && j.myRole === 'ARTISAN' ? <ArtisanActions j={j} act={act} reloadTo={reloadTo} /> : null}
             {open && j.myRole === 'CLIENT' ? <ClientActions j={j} act={act} /> : null}
             {j.status === 'DONE' ? <Warranty j={j} act={act} /> : null}
+            <Deal j={j} />
+            <Items j={{ ...j, items: j.items.filter((i) => !i.canAnswer) }} act={act} />
+            {open ? <Appointment requestId={j.requestId} at={j.appointmentAt} by={j.appointmentBy} confirmed={j.appointmentConfirmed} myRole={j.myRole} status={j.status} onChange={st.reload} /> : null}
             <Photos j={j} act={act} />
             {j.status === 'ACCEPTED' || j.status === 'DONE' ? <Problem j={j} act={act} /> : null}
             <span className="muted xs num" style={{ textAlign: 'center' }}>#{fmt(j.requestId)}</span>

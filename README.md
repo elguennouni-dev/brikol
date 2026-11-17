@@ -28,7 +28,7 @@ Brikol (from *bricoler*, the word everybody uses for small repair jobs) tries to
 3. You compare, negotiate if you want, accept one, and chat to set a time.
 4. He comes, you pay him in cash, you both leave a review.
 
-The app doesn't touch the payment. Most people here pay cash and that's not going to change because of an app, so I didn't fight it.
+The app doesn't touch the payment. Most people here pay cash and that's not going to change because of an app, so I didn't fight it. Instead, everything agreed is written down and confirmed by the other side, the job is closed with a 4-digit code only the client has (like a delivery code), there's a 7-day warranty, and an "I have a problem" button that reaches a real person.
 
 The whole UI is in Darija (Arabic script, right-to-left) and French, and you can switch at any moment.
 
