@@ -30,7 +30,25 @@ final class PushTexts {
             Map.entry("SUBSCRIPTION_EXTENDED", new String[]{"الاشتراك ديالك تجدد ✓", "Votre abonnement est prolongé ✓"}),
             Map.entry("SUBSCRIPTION_ENDING", new String[]{"الاشتراك ديالك غادي يسالي قريب", "Votre abonnement se termine bientôt"}),
             Map.entry("REPORT_CREATED", new String[]{"بلاغ جديد", "Nouveau signalement"}),
-            Map.entry("REPORT_HANDLED", new String[]{"البلاغ ديالك تعالج", "Votre signalement a été traité"}));
+            Map.entry("REPORT_HANDLED", new String[]{"البلاغ ديالك تعالج", "Votre signalement a été traité"}),
+            Map.entry("ARTISAN_ARRIVED", new String[]{"{name} وصل عندك", "{name} est arrivé"}),
+            Map.entry("JOB_FINISHED", new String[]{"{name} قال الخدمة سالات. الباقي: {v} درهم. إلا خلصتيه عطيه الكود: {c}",
+                    "{name} a terminé. Reste à payer : {v} DH. Une fois payé, donnez-lui le code {c}"}),
+            Map.entry("JOB_DONE_CODE", new String[]{"الخدمة تسالات ✓ قيّم {name}", "Travail terminé ✓ Notez {name}"}),
+            Map.entry("JOB_CLOSED", new String[]{"الكود صحيح ✓ الخدمة تسالات", "Code correct ✓ Travail clôturé"}),
+            Map.entry("JOB_CLOSED_ADMIN", new String[]{"الفريق سالا هاد الخدمة", "L’équipe a clôturé ce travail"}),
+            Map.entry("ARTISAN_WITHDREW", new String[]{"{name} ما يقدرش يجي. ختار عرض آخر", "{name} ne peut pas venir. Choisissez une autre offre"}),
+            Map.entry("EXTRA_PROPOSED", new String[]{"{name} طلب زيادة: {v} درهم. وافق ولا رفض فالتطبيق", "{name} demande un supplément de {v} DH"}),
+            Map.entry("ADVANCE_DECLARED", new String[]{"أكد التسبيق ديال {v} درهم", "Confirmez l’avance de {v} DH"}),
+            Map.entry("ITEM_ACCEPTED", new String[]{"تقبل: {v} درهم ✓", "Accepté : {v} DH ✓"}),
+            Map.entry("ITEM_REFUSED", new String[]{"ترفض: {v} درهم", "Refusé : {v} DH"}),
+            Map.entry("WARRANTY_OPENED", new String[]{"الضمانة: {name} قال المشكل رجع. خاصك ترجع تصلحو بلا فلوس", "Garantie : {name} signale que le problème est revenu"}),
+            Map.entry("WARRANTY_FIXED", new String[]{"{name} قال صلح المشكل. أكد ليه", "{name} dit avoir réparé. Confirmez"}),
+            Map.entry("WARRANTY_NOT_FIXED", new String[]{"الكليان قال المشكل باقي", "Le client dit que le problème persiste"}),
+            Map.entry("CASE_NEW", new String[]{"مشكل جديد خاصو المعالجة", "Nouveau litige à traiter"}),
+            Map.entry("CASE_RESOLVED", new String[]{"الفريق جاوب على المشكل ديالك", "L’équipe a répondu à votre problème"}),
+            Map.entry("STRIKE_GIVEN", new String[]{"توصلتي بإنذار", "Vous avez reçu un avertissement"}),
+            Map.entry("ACCOUNT_SUSPENDED", new String[]{"الحساب ديالك توقف 7 أيام بسبب الإنذارات", "Votre compte est suspendu 7 jours (avertissements)"}));
 
     static String text(String kind, String lang, String name, String value) {
         String[] pair = T.get(kind);
@@ -38,6 +56,13 @@ final class PushTexts {
             return "fr".equals(lang) ? "Nouvelle notification" : "إشعار جديد";
         }
         String s = "fr".equals(lang) ? pair[1] : pair[0];
-        return s.replace("{name}", name == null ? "" : name).replace("{v}", value == null ? "" : value).trim();
+        String v = value == null ? "" : value;
+        String c = "";
+        int bar = v.indexOf('|');               // "amount|code"
+        if (bar >= 0) {
+            c = v.substring(bar + 1);
+            v = v.substring(0, bar);
+        }
+        return s.replace("{name}", name == null ? "" : name).replace("{v}", v).replace("{c}", c).trim();
     }
 }

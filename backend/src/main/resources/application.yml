@@ -50,6 +50,13 @@ app:
       auth-token: ${TWILIO_AUTH_TOKEN:}
       # a Twilio phone number (+1...) or a Messaging Service SID (MG...)
       from: ${TWILIO_FROM:}
+  # Important job events by WhatsApp or SMS (Twilio account above). channel: none, whatsapp, sms, log
+  alerts:
+    channel: ${ALERTS_CHANNEL:none}
+    # the Twilio WhatsApp sender, e.g. +14155238886 (sandbox) or your approved business number
+    whatsapp-from: ${TWILIO_WHATSAPP_FROM:}
+    # Content SID (HX...) of an approved template with one variable, e.g. "Brikol: {{1}}"
+    whatsapp-template: ${TWILIO_WHATSAPP_TEMPLATE:}
   # Push notifications (Firebase Cloud Messaging). Empty = off.
   push:
     credentials-file: ${FCM_CREDENTIALS:}

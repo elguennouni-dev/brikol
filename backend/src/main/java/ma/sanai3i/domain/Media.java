@@ -17,6 +17,11 @@ public class Media {
     public static final String PORTFOLIO = "PORTFOLIO";
     public static final String ID_FRONT = "ID_FRONT";
     public static final String ID_BACK = "ID_BACK";
+    /** Job evidence, linked to the request: photos before / after the work, a receipt, a photo sent with a problem. */
+    public static final String JOB_BEFORE = "JOB_BEFORE";
+    public static final String JOB_AFTER = "JOB_AFTER";
+    public static final String RECEIPT = "RECEIPT";
+    public static final String CASE = "CASE";
 
     @Id
     @Column(length = 36)

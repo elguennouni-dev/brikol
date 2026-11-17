@@ -42,7 +42,10 @@ public class MediaService {
             "video/3gpp", "3gp");
     private static final Map<String, String> AUDIO = Map.of("audio/webm", "weba", "audio/ogg", "ogg", "audio/mp4", "m4a",
             "audio/x-m4a", "m4a", "audio/aac", "aac", "audio/mpeg", "mp3", "audio/wav", "wav", "audio/x-wav", "wav");
-    private static final Set<String> PURPOSES = Set.of(Media.REQUEST, Media.AVATAR, Media.PORTFOLIO, Media.ID_FRONT, Media.ID_BACK);
+    private static final Set<String> PURPOSES = Set.of(Media.REQUEST, Media.AVATAR, Media.PORTFOLIO, Media.ID_FRONT, Media.ID_BACK,
+            Media.JOB_BEFORE, Media.JOB_AFTER, Media.RECEIPT, Media.CASE);
+    /** Files anyone involved in a job may send. */
+    private static final Set<String> ANY_ROLE = Set.of(Media.RECEIPT, Media.CASE);
     private static final int MAX_PER_DAY = 80;
 
     private final MediaRepository repo;
@@ -58,7 +61,7 @@ public class MediaService {
         if (!PURPOSES.contains(p)) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "VALIDATION");
         }
-        if (Media.REQUEST.equals(p) ? me.role() != Role.CLIENT : me.role() != Role.ARTISAN) {
+        if (!ANY_ROLE.contains(p) && (Media.REQUEST.equals(p) ? me.role() != Role.CLIENT : me.role() != Role.ARTISAN)) {
             throw new ApiException(HttpStatus.FORBIDDEN, "FORBIDDEN");
         }
         if (file == null || file.isEmpty()) {
@@ -153,7 +156,23 @@ public class MediaService {
 
     @Transactional(readOnly = true)
     public List<MediaDto> ofRequest(Long requestId) {
-        return repo.findByRequestIdOrderByCreatedAtAsc(requestId).stream().map(MediaService::dto).toList();
+        return ofRequest(requestId, Media.REQUEST);
+    }
+
+    @Transactional(readOnly = true)
+    public List<MediaDto> ofRequest(Long requestId, String purpose) {
+        return repo.findByRequestIdOrderByCreatedAtAsc(requestId).stream().filter(m -> purpose.equals(m.purpose))
+                .map(MediaService::dto).toList();
+    }
+
+    /** Links one of the uploader's unused files of that purpose to a request (job evidence). */
+    public Media attach(Long ownerId, Long requestId, String id, String purpose) {
+        Media m = owned(ownerId, id, purpose);
+        if (m.requestId != null && !m.requestId.equals(requestId)) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "MEDIA_INVALID");
+        }
+        m.requestId = requestId;
+        return m;
     }
 
     /** Links uploaded files to a new request. Only the uploader's own, unused REQUEST files are accepted. */

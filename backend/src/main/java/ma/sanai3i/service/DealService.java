@@ -69,6 +69,7 @@ public class DealService {
             m.readAt = Instant.now();
         }
         List<MessageDto> list = messages.findByRequestIdOrderByIdAsc(requestId).stream()
+                .filter(m -> m.senderId.equals(s.me().id) || m.senderId.equals(s.other().id))   // not an earlier artisan's chat
                 .map(m -> dto(m, s.me().id, m.senderId.equals(s.me().id) ? s.me() : s.other())).toList();
         JobRequest r = s.r();
         return new Chat(r.id, r.category.code, r.category.nameAr, r.category.nameFr, r.status.name(),

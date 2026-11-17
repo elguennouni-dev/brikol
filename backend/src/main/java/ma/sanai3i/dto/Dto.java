@@ -56,7 +56,9 @@ public final class Dto {
     public record UserDto(Long id, String phone, String fullName, Role role, String city, Long artisanId,
                           String artisanStatus,
                           /** administration: owner of the platform, and staff permissions */
-                          boolean superAdmin, List<String> permissions) {
+                          boolean superAdmin, List<String> permissions,
+                          /** set while the account is suspended after too many strikes */
+                          java.time.Instant suspendedUntil) {
     }
 
     public record AuthResponse(String token, UserDto user) {
