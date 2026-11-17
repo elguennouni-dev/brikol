@@ -82,7 +82,6 @@ public class ReportService {
         }
         Long targetId = in.targetId();
         Long targetUser;
-        switch (type) {
         // Only what the reporter can actually see may be reported; anything else answers "not found" like an
         // unknown id (no way to probe which ids exist, no way to raise someone's report count from outside).
         Long meId = me.userId();
