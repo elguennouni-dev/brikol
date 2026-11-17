@@ -43,7 +43,7 @@
     <dependency>
       <groupId>com.google.auth</groupId>
       <artifactId>google-auth-library-oauth2-http</artifactId>
-      <version>1.37.1</version>
+      <version>1.58.0</version>
     </dependency>
     <!-- verifies Google ID tokens (signature with Google's public keys) -->
     <dependency>
