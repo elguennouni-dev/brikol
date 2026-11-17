@@ -4,8 +4,10 @@
 
 <p align="center">
   A marketplace for home repairs in Morocco. Clients post a problem, nearby artisans send prices.
-  <br>
-  <a href="https://snai3i.elguennouni.site">Live site</a> ·
+  <br><br>
+  <a href="https://snai3i.elguennouni.site"><b>▶ Try it live: snai3i.elguennouni.site</b></a>
+  <br><br>
+  <a href="https://snai3i.elguennouni.site/app/">Open the app</a> ·
   <a href="docs/SETUP.md">Setup & reference</a> ·
   <a href="deploy/README-DEPLOY.md">Deployment</a>
 </p>
@@ -39,19 +41,27 @@ The whole UI is in Darija (Arabic script, right-to-left) and French, and you can
 - Pick the location on a map, or use the current position
 - Get offers live, without refreshing, and counter-offer on the price
 - Chat with the artisan once an offer is accepted, and agree on an appointment (with a reminder the day before)
-- Rate the artisan, report abuse
+- Follow the job on one screen: the agreed price, extras and advances, and a 4-digit code to give the artisan once paid
+- 7-day warranty: if the problem comes back, the artisan comes back for free
+- Rate the artisan, or press "I have a problem" and someone from the team calls
 
 **For artisans**
 - See only requests for their own trade, inside the radius they chose (5 to 50 km)
 - Send a price, negotiate (up to 6 rounds), see how far the job is and how the client was rated by other artisans
 - Before getting any work, fill an activation file (CIN front/back, photo, past work, zone) that a person from the team checks
+- On the job: three big buttons (I'm here, Extra, Finished), a number pad for the client's code, photos before / after, and a "listen" button that reads the screen aloud for people who don't read easily
+- "The client didn't pay" goes straight to the team with the whole file
 
 **For the team**
 - Dashboard with the numbers that matter (requests per day, signups, per-trade breakdown, live connections)
 - Review artisan files, approve or reject with a reason
+- Handle disputes with everything in one place (agreement, extras, advances, timeline, photos, chat, both phone numbers), give strikes; 3 strikes in 30 days suspend an account for a week
 - Handle reports, block users, edit trades and their price bounds, send broadcasts
 - An owner account and staff accounts with only the permissions they need (files, reports, billing…). You can't turn a normal user into an admin; staff are created from the Team tab.
 - Every sensitive action is written to an audit log
+
+![The job screen: client, artisan, code pad, warranty](docs/screenshots/job-flow.jpg)
+<p align="center"><sub>After an offer is accepted: what the client sees (an extra to accept, the code), the artisan's big buttons and code pad (in Darija), and the warranty once the job is closed</sub></p>
 
 <table>
   <tr>
@@ -98,6 +108,8 @@ The Spring Boot app serves everything: the API, the built React app under `/app/
 **Price range per trade.** When a client types a budget, or an artisan types a price, it has to be inside a range, otherwise you get 5 DH jokes or 500 000 DH typos. Each trade starts with bounds set by the admin. Once there are enough accepted offers for that trade, the range tightens around real prices (from 60% of the 10th percentile to 160% of the 90th). The range is frozen on the request when it's created, so it doesn't move under people mid-negotiation. See `PricingService`.
 
 **Negotiation.** An offer remembers who spoke last, how many rounds happened and the first price. You can only answer when it's your turn, and after 6 rounds it's take it or leave it. Small state machine, but it removed a lot of back and forth in chat.
+
+**Cash, but with a paper trail.** Brikol never holds money, so trust comes from records both sides confirm. An extra only counts once the client accepts it; an advance only counts once the other side confirms it. The job is closed when the artisan types the client's 4-digit code (wrong tries are counted even though the request fails, using `noRollbackFor`), or by the client alone. Warranty claims the artisan ignores for 72 hours are escalated by a scheduled job. Important events also go out by WhatsApp through Twilio, because that's where artisans actually read messages.
 
 **Matching and location privacy.** Requests are matched by trade and by haversine distance between the client's pin and the artisan's base, within the artisan's radius (falls back to same city when there are no coordinates). Before an offer is accepted, the artisan only sees the position rounded to about 1 km and no address. The exact place and phone number are revealed only after acceptance.
 
