@@ -221,7 +221,7 @@ Both apps just load the web app from the server and open `tel:`, WhatsApp, mailt
   outside the `dev` profile with a missing, short or default secret. `deploy.sh` generates it and keeps a copy in `~/.sanai3i/`.
   The admin password is written to `~/.sanai3i/admin-password.txt` (mode 600), never printed.
 - **Tokens**: JWT (HS256) in the `Authorization` header, so no cookies and no CSRF. Each token carries the account's
-  `token_version`: a password reset, a block, or removing a staff member signs that account out on every device.
+  `token_version`: a password reset or removing a staff member (a block refuses every request with ACCOUNT_BLOCKED) signs that account out on every device.
 - **Access**: admin endpoints check the staff permission in the database on every call. Clients see an artisan's profile
   only after receiving an offer from them, and the phone number only after accepting it. The artisan list is staff-only.
 - **Proxy / IP**: `X-Forwarded-For` is only trusted from internal proxies (Tomcat RemoteIpValve), so rate limits and the

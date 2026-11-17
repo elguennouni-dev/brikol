@@ -197,7 +197,6 @@ public class AdminService {
         u.blocked = true;
         u.blockedReason = isBlank(reason) ? null : reason.trim();
         blockList.block(u.id);
-        blockList.revokeTokens(u);
         hub.disconnect(u.id);
         log(admin, "USER_BLOCKED", "USER", u.id, u.fullName + (u.blockedReason == null ? "" : " · " + u.blockedReason));
         return userRow(u);

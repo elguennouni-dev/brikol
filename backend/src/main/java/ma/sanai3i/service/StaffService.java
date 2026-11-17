@@ -123,8 +123,7 @@ public class StaffService {
         u.blockedReason = blocked ? "staff" : null;
         if (blocked) {
             blockList.block(u.id);
-            blockList.revokeTokens(u);
-            hub.disconnect(u.id);
+                hub.disconnect(u.id);
         } else {
             blockList.unblock(u.id);
         }
