@@ -17,11 +17,13 @@ import java.util.List;
 
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.hasItem;
+import static org.hamcrest.Matchers.not;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -168,15 +170,17 @@ class DealsAndTrustTest {
     void publicPagesForSearchEngines() throws Exception {
         Number hassanId = JsonPath.read(body(get("/api/artisans").param("q", "Hassan")), "$[0].id");
         mvc.perform(get("/artisans")).andExpect(status().isOk()).andExpect(content().string(containsString("/artisans/paint/casablanca")));
+        // trade + city pages carry no artisan names
         mvc.perform(get("/artisans/paint/casablanca")).andExpect(status().isOk())
-                .andExpect(content().string(containsString("Hassan"))).andExpect(content().string(containsString("rel=canonical")));
-        mvc.perform(get("/pro/" + hassanId)).andExpect(status().isOk())
-                .andExpect(content().string(containsString("application/ld+json")))
-                .andExpect(content().string(containsString("AggregateRating")));
-        mvc.perform(get("/pro/999999")).andExpect(status().isNotFound());
+                .andExpect(content().string(not(containsString("Hassan")))).andExpect(content().string(containsString("rel=canonical")))
+                .andExpect(content().string(containsString("application/ld+json"))).andExpect(content().string(containsString("/app/#/new?cat=paint")));
+        mvc.perform(get("/pro/" + hassanId)).andExpect(status().isMovedPermanently())
+                .andExpect(header().string("Location", "/artisans/paint/casablanca"));
+        mvc.perform(get("/pro/999999")).andExpect(status().isMovedPermanently()).andExpect(header().string("Location", "/artisans"));
         mvc.perform(get("/artisans/paint/atlantis")).andExpect(status().isOk()).andExpect(content().string(containsString("noindex")));
         mvc.perform(get("/artisans/nothing/casablanca")).andExpect(status().isNotFound());
-        mvc.perform(get("/sitemap.xml")).andExpect(status().isOk()).andExpect(content().string(containsString("/pro/" + hassanId)));
+        mvc.perform(get("/sitemap.xml")).andExpect(status().isOk()).andExpect(content().string(containsString("/artisans/paint/casablanca")))
+                .andExpect(content().string(not(containsString("/pro/"))));
         mvc.perform(get("/robots.txt")).andExpect(content().string(containsString("Sitemap:")));
     }
 }

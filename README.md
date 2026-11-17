@@ -105,7 +105,7 @@ The Spring Boot app serves everything: the API, the built React app under `/app/
 
 **Artisan activation.** Artisans have a status (draft, pending, approved, rejected). Until they're approved they can't see any request. ID photos are stored privately and only served to staff who have the FILES permission. Uploaded files are checked by their actual bytes, not by the extension.
 
-**Pages for Google.** A React app is mostly invisible to search engines, so the server also renders plain HTML pages like `/artisans/plomberie/casablanca` and one page per approved artisan, with JSON-LD, a sitemap, and `noindex` on empty pages so we don't publish thin content.
+**Pages for Google.** A React app is mostly invisible to search engines, so the server also renders plain HTML pages per trade and city, like `/artisans/plumb/casablanca`, with JSON-LD, the usual price range for that trade, a sitemap, and `noindex` on empty pages so we don't publish thin content. They never list artisan names: on Brikol a client meets artisans only through the offers they send.
 
 **One frontend, three apps.** The same React bundle runs on the web and inside the Android and iOS shells. The shells add what a WebView can't do well on its own (file pickers with the camera, microphone, push tokens) and pass it to the page through a small JS bridge.
 

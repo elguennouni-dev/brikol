@@ -92,8 +92,9 @@ Artisans pay outside the app; the admin records the payment on the user page, wh
 Without an active subscription an artisan can see requests but not send offers. Featured artisans are listed first.
 
 ## Pages for Google
-`/artisans` (index), `/artisans/{trade}/{city}` (e.g. `/artisans/paint/casablanca`), `/pro/{id}/{slug}` (artisan profile with
-schema.org data), `/sitemap.xml`, `/robots.txt`. Submit the sitemap in Google Search Console.
+`/artisans` (index), `/artisans/{trade}/{city}` (e.g. `/artisans/paint/casablanca`: number of verified artisans, usual
+price, how it works, schema.org `Service` data; never artisan names), `/sitemap.xml`, `/robots.txt`. Old `/pro/{id}` links
+redirect (301) to the trade + city page. Submit the sitemap in Google Search Console.
 
 ## Requests: photos, video, voice notes
 `POST /api/uploads` (multipart: `file`, `purpose`). Clients attach up to 6 files to a request (`mediaIds`): photos (resized to
